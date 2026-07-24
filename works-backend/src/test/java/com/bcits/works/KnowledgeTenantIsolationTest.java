@@ -13,6 +13,7 @@ import com.bcits.works.knowledge.ArticleApprovalRepository;
 import com.bcits.works.knowledge.ArticleCommentRepository;
 import com.bcits.works.knowledge.ArticleBulkService;
 import com.bcits.works.knowledge.ArticleController;
+import com.bcits.works.knowledge.ArticlePublishingService;
 import com.bcits.works.knowledge.ArticleDao;
 import com.bcits.works.knowledge.ArticleDiffService;
 import com.bcits.works.knowledge.ArticleQueryService;
@@ -85,13 +86,16 @@ class KnowledgeTenantIsolationTest {
         spaceRepository, analyticsService, diffService, articleDao, eventService, rbac);
     private final ArticleService articleService = new ArticleService(
         articleRepository, articleVersionRepository,
-        spaceRepository, approvalRepository, workflowService,
+        spaceRepository,
         articleDao, eventService, rbac,
-        webhookService, spaceFollowerService, articleQueryService);
+        webhookService, articleQueryService);
     private final ArticleBulkService articleBulkService = new ArticleBulkService(
         articleRepository, spaceRepository, eventService, rbac, webhookService, spaceFollowerService);
+    private final ArticlePublishingService articlePublishingService = new ArticlePublishingService(
+        articleRepository, approvalRepository, spaceRepository, workflowService,
+        eventService, rbac, webhookService, spaceFollowerService, articleQueryService);
     private final ArticleController articles = new ArticleController(
-        articleService, articleQueryService, articleBulkService, authenticatedUser);
+        articleService, articleQueryService, articleBulkService, articlePublishingService, authenticatedUser);
     private final KnowledgeSpaceController spaces = new KnowledgeSpaceController(
         spaceRepository, articleRepository, eventService, authenticatedUser, rbac);
 

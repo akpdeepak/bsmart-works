@@ -7,7 +7,6 @@ import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.EventService;
 import com.bcits.works.knowledge.Article;
 import com.bcits.works.knowledge.ArticleAnalyticsService;
-import com.bcits.works.knowledge.ArticleApprovalRepository;
 import com.bcits.works.knowledge.ArticleCommentRepository;
 import com.bcits.works.knowledge.ArticleDao;
 import com.bcits.works.knowledge.ArticleDiffService;
@@ -16,10 +15,8 @@ import com.bcits.works.knowledge.ArticleRepository;
 import com.bcits.works.knowledge.ArticleService;
 import com.bcits.works.knowledge.ArticleVersion;
 import com.bcits.works.knowledge.ArticleVersionRepository;
-import com.bcits.works.knowledge.ArticleWorkflowService;
 import com.bcits.works.knowledge.KnowledgeSpace;
 import com.bcits.works.knowledge.KnowledgeSpaceRepository;
-import com.bcits.works.knowledge.SpaceFollowerService;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -31,7 +28,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -58,15 +54,12 @@ class ArticleServiceTest {
     private final ArticleVersionRepository articleVersionRepository = mock(ArticleVersionRepository.class);
     private final ArticleCommentRepository articleCommentRepository = mock(ArticleCommentRepository.class);
     private final KnowledgeSpaceRepository knowledgeSpaceRepository = mock(KnowledgeSpaceRepository.class);
-    private final ArticleApprovalRepository approvalRepository = mock(ArticleApprovalRepository.class);
-    private final ArticleWorkflowService workflowService = mock(ArticleWorkflowService.class);
     private final ArticleAnalyticsService analyticsService = mock(ArticleAnalyticsService.class);
     private final ArticleDiffService diffService = mock(ArticleDiffService.class);
     private final ArticleDao articleDao = mock(ArticleDao.class);
     private final EventService eventService = mock(EventService.class);
     private final RbacService rbac = mock(RbacService.class);
     private final WebhookService webhookService = mock(WebhookService.class);
-    private final SpaceFollowerService spaceFollowerService = mock(SpaceFollowerService.class);
 
     // The read side and the by-id tenant/RBAC choke points now live in ArticleQueryService; the
     // command service delegates its loads there, so the test wires a real one over the same mocks.
@@ -76,9 +69,9 @@ class ArticleServiceTest {
 
     private final ArticleService service = new ArticleService(
             articleRepository, articleVersionRepository,
-            knowledgeSpaceRepository, approvalRepository, workflowService,
+            knowledgeSpaceRepository,
             articleDao, eventService, rbac,
-            webhookService, spaceFollowerService, queryService);
+            webhookService, queryService);
 
     @BeforeEach
     void setUp() {
@@ -152,28 +145,8 @@ class ArticleServiceTest {
         verify(articleRepository, never()).save(any());
     }
 
-    // KR-038 bulk archive/delete/publish cases moved to ArticleBulkServiceTest with the extraction.
-
-    @Test
-    void approveArticle_autoPublishesAndEnqueuesWebhook() {
-        Article article = article(ARTICLE_A1, SPACE_A, "Release notes");
-        article.setStatus("IN_REVIEW");
-        article.setAuthorId("author-1");
-        KnowledgeSpace space = space(SPACE_A, WS_A);
-        space.setRequiredApprovals(1);
-        when(articleRepository.findById(ARTICLE_A1)).thenReturn(Optional.of(article));
-        when(knowledgeSpaceRepository.findById(SPACE_A)).thenReturn(Optional.of(space));
-        when(approvalRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(approvalRepository.countByArticleIdAndWorkspaceIdAndDecision(ARTICLE_A1, WS_A, "APPROVED"))
-                .thenReturn(1);
-
-        service.approveArticle(ARTICLE_A1, USER_A, WS_A, "APPROVED", "Looks good");
-
-        assertThat(article.getStatus()).isEqualTo("PUBLISHED");
-        verify(eventService).recordInWorkspace(eq(WS_A), eq(ARTICLE_A1),
-                eq("ARTICLE_PUBLISHED"), eq(USER_A), any());
-        verify(webhookService).enqueue(eq(WS_A), eq("ARTICLE_PUBLISHED"), any());
-    }
+    // KR-038 bulk cases moved to ArticleBulkServiceTest; KR-019/KR-020 workflow (approve, schedule,
+    // transition) moved to ArticlePublishingServiceTest — both with the Phase 2 extractions.
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 

@@ -10,7 +10,7 @@ import com.bcits.works.knowledge.ArticleApproval;
 import com.bcits.works.knowledge.ArticleApprovalController;
 import com.bcits.works.knowledge.ArticleApprovalRepository;
 import com.bcits.works.knowledge.ArticleRepository;
-import com.bcits.works.knowledge.ArticleService;
+import com.bcits.works.knowledge.ArticlePublishingService;
 import com.bcits.works.knowledge.KnowledgeSpace;
 import com.bcits.works.knowledge.KnowledgeSpaceRepository;
 
@@ -52,7 +52,7 @@ class ArticleApprovalControllerTest {
     private final ArticleRepository articleRepository         = mock(ArticleRepository.class);
     private final KnowledgeSpaceRepository spaceRepository    = mock(KnowledgeSpaceRepository.class);
     private final ArticleApprovalRepository approvalRepository = mock(ArticleApprovalRepository.class);
-    private final ArticleService articleService               = mock(ArticleService.class);
+    private final ArticlePublishingService articlePublishingService = mock(ArticlePublishingService.class);
     private final RbacService rbac                            = mock(RbacService.class);
     private final AuthenticatedUser authenticatedUser         = mock(AuthenticatedUser.class);
 
@@ -62,7 +62,7 @@ class ArticleApprovalControllerTest {
     void setUp() {
         controller = new ArticleApprovalController(
                 articleRepository, spaceRepository, approvalRepository,
-                articleService, rbac, authenticatedUser);
+                articlePublishingService, rbac, authenticatedUser);
 
         // Article in WS_A
         Article article = new Article();
@@ -86,14 +86,14 @@ class ArticleApprovalControllerTest {
         ArticleApproval expected = new ArticleApproval();
         expected.setId("APR-001");
         expected.setDecision("APPROVED");
-        when(articleService.approveArticle(eq(ARTICLE_ID), eq(REVIEWER), eq(WS_A),
+        when(articlePublishingService.approveArticle(eq(ARTICLE_ID), eq(REVIEWER), eq(WS_A),
                 eq("APPROVED"), any())).thenReturn(expected);
 
         Map<String, String> body = Map.of("decision", "APPROVED", "comment", "Looks good");
         ArticleApproval result = controller.submitApproval(ARTICLE_ID, body);
 
         assertThat(result.getDecision()).isEqualTo("APPROVED");
-        verify(articleService).approveArticle(ARTICLE_ID, REVIEWER, WS_A, "APPROVED", "Looks good");
+        verify(articlePublishingService).approveArticle(ARTICLE_ID, REVIEWER, WS_A, "APPROVED", "Looks good");
     }
 
     // ── Test 2: list approvals ───────────────────────────────────────────────────
@@ -119,7 +119,7 @@ class ArticleApprovalControllerTest {
     void submitApproval_authorApprovesOwnArticle_isForbidden() {
         when(authenticatedUser.id()).thenReturn(AUTHOR);
         doThrow(ApiException.forbidden("An author cannot approve their own article."))
-                .when(articleService).approveArticle(eq(ARTICLE_ID), eq(AUTHOR), eq(WS_A),
+                .when(articlePublishingService).approveArticle(eq(ARTICLE_ID), eq(AUTHOR), eq(WS_A),
                         any(), any());
 
         assertThatThrownBy(() -> controller.submitApproval(ARTICLE_ID,

@@ -1,6 +1,6 @@
 package com.bcits.works.service;
 
-import com.bcits.works.security.CustomerAttributionPiiService;
+import com.bcits.works.security.api.CustomerAttributionPiiService;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.EventService;
 import com.bcits.works.shared.RbacGate;

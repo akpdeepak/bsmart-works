@@ -1,6 +1,6 @@
 package com.bcits.works.projects;
 
-import com.bcits.works.workitems.WorkItem;
+import com.bcits.works.workitems.api.WorkItem;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;

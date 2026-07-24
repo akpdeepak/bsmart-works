@@ -1,16 +1,16 @@
 package com.bcits.works.reporting;
 
 import com.bcits.works.AiCapabilities;
-import com.bcits.works.ai.AiControlPlaneService;
+import com.bcits.works.ai.api.AiControlPlaneService;
 import com.bcits.works.BqlQueryExecutor;
-import com.bcits.works.projects.Project;
-import com.bcits.works.projects.ProjectRepository;
+import com.bcits.works.projects.api.Project;
+import com.bcits.works.projects.api.ProjectRepository;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.BqlContext;
-import com.bcits.works.workitems.WorkItem;
-import com.bcits.works.workitems.WorkItemRepository;
-import com.bcits.works.workspaces.Team;
-import com.bcits.works.workspaces.TeamRepository;
+import com.bcits.works.workitems.api.WorkItem;
+import com.bcits.works.workitems.api.WorkItemRepository;
+import com.bcits.works.workspaces.api.Team;
+import com.bcits.works.workspaces.api.TeamRepository;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;

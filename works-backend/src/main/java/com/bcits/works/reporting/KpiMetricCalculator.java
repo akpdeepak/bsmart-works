@@ -1,6 +1,6 @@
 package com.bcits.works.reporting;
 
-import com.bcits.works.workitems.WorkItem;
+import com.bcits.works.workitems.api.WorkItem;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;

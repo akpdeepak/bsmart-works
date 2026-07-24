@@ -1,6 +1,6 @@
 package com.bcits.works.workitems;
 
-import com.bcits.works.messaging.WatcherService;
+import com.bcits.works.messaging.api.WatcherService;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.RbacGate;

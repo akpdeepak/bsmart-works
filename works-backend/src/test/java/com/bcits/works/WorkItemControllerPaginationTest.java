@@ -3,13 +3,13 @@ package com.bcits.works;
 import com.bcits.works.shared.AuthenticatedUser;
 
 import com.bcits.works.shared.FieldVisibilityService;
-import com.bcits.works.workitems.WorkItem;
+import com.bcits.works.workitems.api.WorkItem;
 import com.bcits.works.workitems.WorkItemBulkService;
 import com.bcits.works.workitems.WorkItemCommandService;
 import com.bcits.works.workitems.WorkItemController;
 import com.bcits.works.workitems.WorkItemEngagementService;
 import com.bcits.works.workitems.WorkItemReadService;
-import com.bcits.works.workitems.WorkItemRepository;
+import com.bcits.works.workitems.api.WorkItemRepository;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 

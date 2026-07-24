@@ -1,4 +1,6 @@
 package com.bcits.works.ai;
+import com.bcits.works.ai.api.AiModelTier;
+import com.bcits.works.ai.api.AiProvider;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;

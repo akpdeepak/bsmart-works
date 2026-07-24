@@ -1,4 +1,5 @@
 package com.bcits.works.workitems;
+import com.bcits.works.workitems.api.WorkItem;
 
 /**
  * Pure field-mapping helper extracted from {@link WorkItemCommandService} (Phase 2 / W2 god-class

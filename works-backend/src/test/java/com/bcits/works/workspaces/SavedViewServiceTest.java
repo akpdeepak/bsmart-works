@@ -1,11 +1,13 @@
 package com.bcits.works.workspaces;
+import com.bcits.works.workspaces.api.SavedView;
+import com.bcits.works.workspaces.api.SavedViewRepository;
 
 import com.bcits.works.auth.RbacService;
 
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.BqlContextFactory;
 import com.bcits.works.shared.BqlExecutionService;
-import com.bcits.works.security.BqlRunAuditService;
+import com.bcits.works.security.api.BqlRunAuditService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

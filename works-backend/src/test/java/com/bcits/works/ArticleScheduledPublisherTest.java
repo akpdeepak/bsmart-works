@@ -1,11 +1,11 @@
 package com.bcits.works;
 
 import com.bcits.works.shared.EventService;
-import com.bcits.works.knowledge.Article;
-import com.bcits.works.knowledge.ArticleRepository;
+import com.bcits.works.knowledge.api.Article;
+import com.bcits.works.knowledge.api.ArticleRepository;
 import com.bcits.works.knowledge.ArticleScheduledPublisher;
-import com.bcits.works.knowledge.KnowledgeSpace;
-import com.bcits.works.knowledge.KnowledgeSpaceRepository;
+import com.bcits.works.knowledge.api.KnowledgeSpace;
+import com.bcits.works.knowledge.api.KnowledgeSpaceRepository;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

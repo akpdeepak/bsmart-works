@@ -1,12 +1,13 @@
 package com.bcits.works.ai;
+import com.bcits.works.ai.api.AiControlPlaneService;
 
-import com.bcits.works.knowledge.Article;
-import com.bcits.works.knowledge.ArticleRepository;
-import com.bcits.works.knowledge.KnowledgeSpace;
-import com.bcits.works.knowledge.KnowledgeSpaceRepository;
-import com.bcits.works.projects.ProjectRepository;
-import com.bcits.works.workitems.WorkItem;
-import com.bcits.works.workitems.WorkItemRepository;
+import com.bcits.works.knowledge.api.Article;
+import com.bcits.works.knowledge.api.ArticleRepository;
+import com.bcits.works.knowledge.api.KnowledgeSpace;
+import com.bcits.works.knowledge.api.KnowledgeSpaceRepository;
+import com.bcits.works.projects.api.ProjectRepository;
+import com.bcits.works.workitems.api.WorkItem;
+import com.bcits.works.workitems.api.WorkItemRepository;
 import com.bcits.works.AiCapabilities;
 import org.springframework.stereotype.Service;
 

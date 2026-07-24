@@ -7,7 +7,7 @@ import com.bcits.works.shared.BqlException;
 import com.bcits.works.shared.BqlCompiler;
 import com.bcits.works.shared.BqlContextFactory;
 import com.bcits.works.workitems.FieldDefController;
-import com.bcits.works.workitems.WorkItem;
+import com.bcits.works.workitems.api.WorkItem;
 import com.bcits.works.workitems.WorkItemReadService;
 import com.bcits.works.workitems.WorkItemFieldValue;
 

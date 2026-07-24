@@ -1,4 +1,6 @@
 package com.bcits.works.workspaces;
+import com.bcits.works.workspaces.api.Team;
+import com.bcits.works.workspaces.api.TeamRepository;
 import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;

@@ -1,7 +1,7 @@
 package com.bcits.works;
-import com.bcits.works.messaging.Notification;
-import com.bcits.works.messaging.NotificationRepository;
-import com.bcits.works.messaging.WatcherService;
+import com.bcits.works.messaging.api.Notification;
+import com.bcits.works.messaging.api.NotificationRepository;
+import com.bcits.works.messaging.api.WatcherService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

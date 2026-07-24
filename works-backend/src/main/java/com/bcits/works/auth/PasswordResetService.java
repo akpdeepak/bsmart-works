@@ -1,4 +1,7 @@
 package com.bcits.works.auth;
+import com.bcits.works.auth.api.TokenRevocationService;
+import com.bcits.works.auth.api.User;
+import com.bcits.works.auth.api.UserRepository;
 
 import com.bcits.works.EmailService;
 

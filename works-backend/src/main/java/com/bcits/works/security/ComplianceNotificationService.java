@@ -1,7 +1,7 @@
 package com.bcits.works.security;
 
-import com.bcits.works.messaging.Notification;
-import com.bcits.works.messaging.NotificationRepository;
+import com.bcits.works.messaging.api.Notification;
+import com.bcits.works.messaging.api.NotificationRepository;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;

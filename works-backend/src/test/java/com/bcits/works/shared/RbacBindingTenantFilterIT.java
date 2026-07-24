@@ -2,8 +2,8 @@ package com.bcits.works.shared;
 
 import com.bcits.works.auth.RbacService;
 
-import com.bcits.works.projects.Project;
-import com.bcits.works.projects.ProjectRepository;
+import com.bcits.works.projects.api.Project;
+import com.bcits.works.projects.api.ProjectRepository;
 
 
 

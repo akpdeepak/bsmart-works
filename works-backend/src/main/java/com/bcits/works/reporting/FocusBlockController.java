@@ -1,4 +1,5 @@
 package com.bcits.works.reporting;
+import com.bcits.works.reporting.api.FocusBlock;
 
 import com.bcits.works.FocusModeService;
 

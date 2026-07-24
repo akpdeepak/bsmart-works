@@ -1,7 +1,7 @@
 package com.bcits.works;
 
 import com.bcits.works.auth.RbacService;
-import com.bcits.works.auth.UserRepository;
+import com.bcits.works.auth.api.UserRepository;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -10,18 +10,18 @@ import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.EventService;
 import com.bcits.works.shared.FieldVisibilityService;
 import com.bcits.works.workitems.DodChecklistService;
-import com.bcits.works.workitems.StatusConfigService;
-import com.bcits.works.workitems.WorkItem;
+import com.bcits.works.workitems.api.StatusConfigService;
+import com.bcits.works.workitems.api.WorkItem;
 import com.bcits.works.workitems.WorkItemBulkService;
 import com.bcits.works.workitems.WorkItemCommandService;
 import com.bcits.works.workitems.WorkItemController;
 import com.bcits.works.workitems.WorkItemEngagementService;
 import com.bcits.works.workitems.WorkItemNotifier;
 import com.bcits.works.workitems.WorkItemReadService;
-import com.bcits.works.workitems.WorkItemRepository;
+import com.bcits.works.workitems.api.WorkItemRepository;
 import com.bcits.works.workitems.WorkflowRuleEngine;
-import com.bcits.works.messaging.NotificationBatchService;
-import com.bcits.works.messaging.WatcherService;
+import com.bcits.works.messaging.api.NotificationBatchService;
+import com.bcits.works.messaging.api.WatcherService;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 

@@ -1,4 +1,6 @@
 package com.bcits.works.messaging;
+import com.bcits.works.messaging.api.Notification;
+import com.bcits.works.messaging.api.NotificationRepository;
 
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.RbacGate;

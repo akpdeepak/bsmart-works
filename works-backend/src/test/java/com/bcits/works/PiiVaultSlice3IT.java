@@ -3,11 +3,11 @@ package com.bcits.works;
 
 import com.bcits.works.shared.TenantScope;
 import com.bcits.works.shared.BlindIndexService;
-import com.bcits.works.security.CustomerAttributionPiiService;
-import com.bcits.works.security.CustomerUserPiiService;
+import com.bcits.works.security.api.CustomerAttributionPiiService;
+import com.bcits.works.security.api.CustomerUserPiiService;
 import com.bcits.works.shared.PiiVaultPolicy;
 import com.bcits.works.shared.PiiVaultService;
-import com.bcits.works.security.StakeholderPiiService;
+import com.bcits.works.security.api.StakeholderPiiService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

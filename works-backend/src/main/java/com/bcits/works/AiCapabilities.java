@@ -1,5 +1,5 @@
 package com.bcits.works;
-import com.bcits.works.ai.AiModelTier;
+import com.bcits.works.ai.api.AiModelTier;
 
 import java.util.List;
 import java.util.Map;

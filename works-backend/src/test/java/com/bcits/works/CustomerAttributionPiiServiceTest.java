@@ -1,5 +1,5 @@
 package com.bcits.works;
-import com.bcits.works.security.CustomerAttributionPiiService;
+import com.bcits.works.security.api.CustomerAttributionPiiService;
 import com.bcits.works.shared.PiiVaultPolicy;
 import com.bcits.works.shared.PiiVaultService;
 

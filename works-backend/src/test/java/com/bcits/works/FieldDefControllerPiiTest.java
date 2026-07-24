@@ -4,7 +4,7 @@ import com.bcits.works.auth.RbacService;
 
 import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.FieldVisibilityService;
-import com.bcits.works.security.CustomerAttributionPiiService;
+import com.bcits.works.security.api.CustomerAttributionPiiService;
 import com.bcits.works.workitems.FieldDefController;
 import com.bcits.works.workitems.WorkItemFieldValue;
 import com.bcits.works.workitems.WorkItemFieldValueRepository;

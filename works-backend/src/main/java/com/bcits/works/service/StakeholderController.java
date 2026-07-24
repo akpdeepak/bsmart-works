@@ -2,7 +2,7 @@ package com.bcits.works.service;
 
 import com.bcits.works.Stakeholder;
 import com.bcits.works.StakeholderRepository;
-import com.bcits.works.security.StakeholderPiiService;
+import com.bcits.works.security.api.StakeholderPiiService;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.RbacGate;

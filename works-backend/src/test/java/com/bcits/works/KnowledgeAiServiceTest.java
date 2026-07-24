@@ -1,6 +1,6 @@
 package com.bcits.works;
-import com.bcits.works.ai.AiControlPlaneService;
-import com.bcits.works.ai.AiModelTier;
+import com.bcits.works.ai.api.AiControlPlaneService;
+import com.bcits.works.ai.api.AiModelTier;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

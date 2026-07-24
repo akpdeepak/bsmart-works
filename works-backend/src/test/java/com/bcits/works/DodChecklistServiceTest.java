@@ -12,8 +12,8 @@ import com.bcits.works.workitems.DodChecklistRepository;
 import com.bcits.works.workitems.DodChecklistService;
 import com.bcits.works.workitems.DodChecklistState;
 import com.bcits.works.workitems.DodChecklistStateRepository;
-import com.bcits.works.workitems.WorkItem;
-import com.bcits.works.workitems.WorkItemRepository;
+import com.bcits.works.workitems.api.WorkItem;
+import com.bcits.works.workitems.api.WorkItemRepository;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

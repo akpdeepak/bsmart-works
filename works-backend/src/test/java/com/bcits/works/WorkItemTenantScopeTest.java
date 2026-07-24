@@ -10,7 +10,7 @@ import com.bcits.works.workitems.WorkItemCommandService;
 import com.bcits.works.workitems.WorkItemController;
 import com.bcits.works.workitems.WorkItemEngagementService;
 import com.bcits.works.workitems.WorkItemReadService;
-import com.bcits.works.workitems.WorkItemRepository;
+import com.bcits.works.workitems.api.WorkItemRepository;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 

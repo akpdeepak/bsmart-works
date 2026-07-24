@@ -1,7 +1,12 @@
 package com.bcits.works.messaging;
+import com.bcits.works.messaging.api.Comment;
+import com.bcits.works.messaging.api.CommentRepository;
+import com.bcits.works.messaging.api.Notification;
+import com.bcits.works.messaging.api.NotificationRepository;
+import com.bcits.works.messaging.api.WatcherService;
 
 import com.bcits.works.EmailService;
-import com.bcits.works.auth.UserRepository;
+import com.bcits.works.auth.api.UserRepository;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.EventService;

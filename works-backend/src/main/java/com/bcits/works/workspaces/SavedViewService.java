@@ -1,4 +1,6 @@
 package com.bcits.works.workspaces;
+import com.bcits.works.workspaces.api.SavedView;
+import com.bcits.works.workspaces.api.SavedViewRepository;
 import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
@@ -7,8 +9,8 @@ import com.bcits.works.shared.BqlException;
 
 import com.bcits.works.shared.BqlContextFactory;
 import com.bcits.works.shared.BqlExecutionService;
-import com.bcits.works.security.BqlRunAudit;
-import com.bcits.works.security.BqlRunAuditService;
+import com.bcits.works.security.api.BqlRunAudit;
+import com.bcits.works.security.api.BqlRunAuditService;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

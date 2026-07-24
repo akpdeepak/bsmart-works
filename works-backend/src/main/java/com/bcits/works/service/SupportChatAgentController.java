@@ -1,8 +1,8 @@
 package com.bcits.works.service;
 
-import com.bcits.works.messaging.ChatAiDraft;
-import com.bcits.works.messaging.ChatConversation;
-import com.bcits.works.security.CustomerAttributionPiiService;
+import com.bcits.works.messaging.api.ChatAiDraft;
+import com.bcits.works.messaging.api.ChatConversation;
+import com.bcits.works.security.api.CustomerAttributionPiiService;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.RbacGate;

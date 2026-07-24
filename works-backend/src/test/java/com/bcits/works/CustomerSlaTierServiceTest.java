@@ -1,5 +1,5 @@
 package com.bcits.works;
-import com.bcits.works.sla.CustomerSlaTier;
+import com.bcits.works.sla.api.CustomerSlaTier;
 import com.bcits.works.sla.CustomerSlaTierService;
 
 import org.junit.jupiter.api.Tag;

@@ -1,4 +1,5 @@
 package com.bcits.works.knowledge;
+import com.bcits.works.knowledge.api.Article;
 
 import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;

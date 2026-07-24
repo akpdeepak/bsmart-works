@@ -1,6 +1,6 @@
 package com.bcits.works.messaging;
 
-import com.bcits.works.knowledge.KnowledgeWorkspaceSettings;
+import com.bcits.works.knowledge.api.KnowledgeWorkspaceSettings;
 import com.bcits.works.shared.EventService;
 
 import org.slf4j.Logger;

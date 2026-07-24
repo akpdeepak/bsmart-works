@@ -1,13 +1,13 @@
 package com.bcits.works;
 
-import com.bcits.works.workspaces.Workspace;
-import com.bcits.works.workspaces.WorkspaceRepository;
+import com.bcits.works.workspaces.api.Workspace;
+import com.bcits.works.workspaces.api.WorkspaceRepository;
 import com.bcits.works.workspaces.WorkspaceService;
 
-import com.bcits.works.auth.User;
+import com.bcits.works.auth.api.User;
 
 import com.bcits.works.auth.RbacService;
-import com.bcits.works.auth.UserRepository;
+import com.bcits.works.auth.api.UserRepository;
 
 import com.bcits.works.shared.ApiException;
 

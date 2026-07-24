@@ -1,9 +1,11 @@
 package com.bcits.works.workspaces;
+import com.bcits.works.workspaces.api.Workspace;
+import com.bcits.works.workspaces.api.WorkspaceRepository;
 
 import com.bcits.works.FunnelService;
 
-import com.bcits.works.auth.User;
-import com.bcits.works.auth.UserRepository;
+import com.bcits.works.auth.api.User;
+import com.bcits.works.auth.api.UserRepository;
 import com.bcits.works.shared.OperatingModelGate;
 import com.bcits.works.shared.RbacGate;
 

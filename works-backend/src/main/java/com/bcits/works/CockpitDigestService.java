@@ -2,8 +2,8 @@ package com.bcits.works;
 import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
-import com.bcits.works.projects.Sprint;
-import com.bcits.works.projects.SprintRepository;
+import com.bcits.works.projects.api.Sprint;
+import com.bcits.works.projects.api.SprintRepository;
 import com.bcits.works.projects.SprintVarianceService;
 
 import org.springframework.jdbc.core.JdbcTemplate;

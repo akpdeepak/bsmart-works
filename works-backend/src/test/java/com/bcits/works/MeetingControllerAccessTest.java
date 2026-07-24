@@ -5,7 +5,7 @@ import com.bcits.works.auth.RbacService;
 import com.bcits.works.shared.AuthenticatedUser;
 
 import com.bcits.works.shared.ApiException;
-import com.bcits.works.messaging.ActionItemRepository;
+import com.bcits.works.messaging.api.ActionItemRepository;
 import com.bcits.works.messaging.Meeting;
 import com.bcits.works.messaging.MeetingController;
 import com.bcits.works.messaging.MeetingNoteRepository;

@@ -3,11 +3,11 @@ package com.bcits.works;
 import com.bcits.works.shared.AuthenticatedUser;
 
 import com.bcits.works.shared.ApiException;
-import com.bcits.works.auth.UserPiiService;
-import com.bcits.works.messaging.Notification;
+import com.bcits.works.auth.api.UserPiiService;
+import com.bcits.works.messaging.api.Notification;
 import com.bcits.works.messaging.NotificationActivityService;
 import com.bcits.works.messaging.NotificationController;
-import com.bcits.works.messaging.NotificationRepository;
+import com.bcits.works.messaging.api.NotificationRepository;
 import com.bcits.works.shared.RbacGate;
 
 import org.junit.jupiter.api.Tag;

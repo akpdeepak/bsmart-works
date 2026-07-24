@@ -3,7 +3,7 @@ package com.bcits.works.workitems;
 import com.bcits.works.FieldDef;
 import com.bcits.works.FieldDefRepository;
 
-import com.bcits.works.security.CustomerAttributionPiiService;
+import com.bcits.works.security.api.CustomerAttributionPiiService;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.FieldVisibilityService;

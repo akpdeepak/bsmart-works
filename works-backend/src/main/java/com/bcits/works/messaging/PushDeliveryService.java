@@ -95,7 +95,11 @@ public class PushDeliveryService {
     // ── Pure helpers (RB-10 §7) ────────────────────────────────────────────────────────────────────
 
     /** Maps notification type (from NotificationBatchService) to the push event-type vocabulary. */
-    static String inferEventType(String notificationType) {
+    // Public only so messaging.api.NotificationBatchService can reach it across the api/internal
+    // package split (GH-537). PushDeliveryService itself stays internal to the messaging module, so
+    // widening this method does not widen the module's contract — crossModuleAccessGoesThroughApi
+    // still forbids any other module from touching it.
+    public static String inferEventType(String notificationType) {
         if (notificationType == null) return null;
         return switch (notificationType.toUpperCase(Locale.ROOT)) {
             case "ASSIGNED", "ASSIGN" -> "ASSIGN";

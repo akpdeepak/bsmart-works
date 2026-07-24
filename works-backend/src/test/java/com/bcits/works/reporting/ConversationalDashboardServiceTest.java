@@ -1,7 +1,7 @@
 package com.bcits.works.reporting;
 
-import com.bcits.works.ai.AiModelTier;
-import com.bcits.works.ai.AiControlPlaneService;
+import com.bcits.works.ai.api.AiModelTier;
+import com.bcits.works.ai.api.AiControlPlaneService;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.EventService;
 

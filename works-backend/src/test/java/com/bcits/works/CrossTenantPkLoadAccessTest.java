@@ -21,7 +21,7 @@ import com.bcits.works.shared.EventService;
 import com.bcits.works.shared.FieldVisibilityRepository;
 import com.bcits.works.workitems.WorkItemLinkController;
 import com.bcits.works.workitems.WorkItemLinkRepository;
-import com.bcits.works.workitems.WorkItemRepository;
+import com.bcits.works.workitems.api.WorkItemRepository;
 import com.bcits.works.workitems.WorkItemTypeConfig;
 import com.bcits.works.workitems.WorkItemTypeConfigController;
 import com.bcits.works.workitems.WorkItemTypeConfigRepository;

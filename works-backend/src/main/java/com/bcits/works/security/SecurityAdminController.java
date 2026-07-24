@@ -2,9 +2,9 @@ package com.bcits.works.security;
 
 import com.bcits.works.AnomalyDetectionService;
 import com.bcits.works.AnomalyDetector;
-import com.bcits.works.auth.ConditionalAccessEvaluator;
-import com.bcits.works.auth.ConditionalAccessPolicy;
-import com.bcits.works.auth.ConditionalAccessService;
+import com.bcits.works.auth.api.ConditionalAccessEvaluator;
+import com.bcits.works.auth.api.ConditionalAccessPolicy;
+import com.bcits.works.auth.api.ConditionalAccessService;
 import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.KeyRotationService;
 import com.bcits.works.shared.RbacGate;

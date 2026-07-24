@@ -1,6 +1,7 @@
 package com.bcits.works.messaging;
+import com.bcits.works.messaging.api.Notification;
 
-import com.bcits.works.auth.UserPiiService;
+import com.bcits.works.auth.api.UserPiiService;
 import com.bcits.works.shared.AuthenticatedUser;
 
 import org.springframework.web.bind.annotation.GetMapping;

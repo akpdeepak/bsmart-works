@@ -1,9 +1,10 @@
 package com.bcits.works.workitems;
+import com.bcits.works.workitems.api.WorkItem;
 
 import com.bcits.works.EmailService;
-import com.bcits.works.auth.UserRepository;
-import com.bcits.works.messaging.NotificationBatchService;
-import com.bcits.works.messaging.WatcherService;
+import com.bcits.works.auth.api.UserRepository;
+import com.bcits.works.messaging.api.NotificationBatchService;
+import com.bcits.works.messaging.api.WatcherService;
 import com.bcits.works.shared.RbacGate;
 
 import org.springframework.stereotype.Service;

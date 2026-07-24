@@ -1,16 +1,16 @@
 package com.bcits.works;
 
 import com.bcits.works.auth.RbacService;
-import com.bcits.works.auth.User;
-import com.bcits.works.auth.UserRepository;
+import com.bcits.works.auth.api.User;
+import com.bcits.works.auth.api.UserRepository;
 
 import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.EventService;
-import com.bcits.works.messaging.Comment;
-import com.bcits.works.messaging.CommentRepository;
+import com.bcits.works.messaging.api.Comment;
+import com.bcits.works.messaging.api.CommentRepository;
 import com.bcits.works.messaging.CommentService;
-import com.bcits.works.messaging.NotificationRepository;
+import com.bcits.works.messaging.api.NotificationRepository;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

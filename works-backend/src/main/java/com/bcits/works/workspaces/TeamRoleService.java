@@ -1,12 +1,12 @@
 package com.bcits.works.workspaces;
 
-import com.bcits.works.projects.CeremonySession;
-import com.bcits.works.projects.CeremonySessionRepository;
+import com.bcits.works.projects.api.CeremonySession;
+import com.bcits.works.projects.api.CeremonySessionRepository;
 import com.bcits.works.ImpedimentService;
-import com.bcits.works.projects.ProjectTeamMember;
-import com.bcits.works.projects.ProjectTeamMemberRepository;
-import com.bcits.works.projects.Sprint;
-import com.bcits.works.projects.SprintRepository;
+import com.bcits.works.projects.api.ProjectTeamMember;
+import com.bcits.works.projects.api.ProjectTeamMemberRepository;
+import com.bcits.works.projects.api.Sprint;
+import com.bcits.works.projects.api.SprintRepository;
 import com.bcits.works.TodayLayoutService;
 import com.bcits.works.shared.RbacGate;
 

@@ -1,4 +1,6 @@
 package com.bcits.works.projects;
+import com.bcits.works.projects.api.Sprint;
+import com.bcits.works.projects.api.SprintRepository;
 
 import com.bcits.works.CockpitDigestService;
 import com.bcits.works.shared.ApiException;

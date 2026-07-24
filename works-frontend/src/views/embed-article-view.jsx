@@ -4,8 +4,8 @@
 // No sidebar, no header, no bSmart branding — just the article title and content blocks.
 // X-Frame-Options is not set on /api/v1/public/** (SecurityConfig), so iframe embedding works.
 import { useState, useEffect } from 'react';
-import { AlertTriangle } from 'lucide-react';
 import { api } from '@/lib/apiClient';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { BlockRenderer } from '@/components/BlockRenderer';
 import { renderMd } from '@/lib/utils';
 
@@ -32,26 +32,28 @@ export default function EmbedArticleView({ token }) {
       });
   }, [token]);
 
-  if (loading) {
+  // Unresolved states keep this route's minimal iframe chrome but render through AsyncBoundary so
+  // the loading and error treatments match every other async surface (RB-30 §6).
+  if (loading || error || !article) {
     return (
       <div className="min-h-screen bg-white dark:bg-neutral-950 p-6">
-        <div className="space-y-3 max-w-reading animate-pulse" aria-busy="true" aria-label="Loading article">
-          <div className="h-7 bg-neutral-100 dark:bg-neutral-800 rounded-lg w-3/4" />
-          <div className="h-4 bg-neutral-100 dark:bg-neutral-800 rounded w-full" />
-          <div className="h-4 bg-neutral-100 dark:bg-neutral-800 rounded w-5/6" />
-          <div className="h-4 bg-neutral-100 dark:bg-neutral-800 rounded w-4/6" />
+        <div className="max-w-reading">
+          <AsyncBoundary
+            loading={loading}
+            error={error || (!article ? 'This article embed is no longer available.' : null)}
+            errorTitle="Article unavailable"
+            label="Loading article"
+            className="space-y-3 animate-pulse"
+            skeleton={
+              <>
+                <div className="h-7 bg-neutral-100 dark:bg-neutral-800 rounded-lg w-3/4" />
+                <div className="h-4 bg-neutral-100 dark:bg-neutral-800 rounded w-full" />
+                <div className="h-4 bg-neutral-100 dark:bg-neutral-800 rounded w-5/6" />
+                <div className="h-4 bg-neutral-100 dark:bg-neutral-800 rounded w-4/6" />
+              </>
+            }
+          />
         </div>
-      </div>
-    );
-  }
-
-  if (error || !article) {
-    return (
-      <div className="min-h-screen bg-white dark:bg-neutral-950 flex flex-col items-center justify-center gap-3 p-8">
-        <AlertTriangle className="h-10 w-10 text-neutral-300" aria-hidden="true" />
-        <p className="text-sm text-neutral-500 text-center max-w-reading">
-          {error || 'This article embed is no longer available.'}
-        </p>
       </div>
     );
   }

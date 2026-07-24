@@ -1,8 +1,9 @@
 // KR-066 — Public article view: renders a shared article with no sidebar/editor/auth.
 // Loaded at route /p/:token — no JWT required; the server fetches by token.
 import { useState, useEffect } from 'react';
-import { BookOpen, AlertTriangle } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 import { api } from '@/lib/apiClient';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { BlockRenderer } from '@/components/BlockRenderer';
 import { renderMd } from '@/lib/utils';
 
@@ -27,29 +28,29 @@ export default function PublicArticleView({ token }) {
       .catch(() => { setError('This link is invalid or the article is no longer available.'); setLoading(false); });
   }, [token]);
 
-  if (loading) {
+  // The unresolved states keep this route's full-screen centred chrome (it is an unauthenticated
+  // page, not a panel inside the shell) but render through AsyncBoundary so the loading and error
+  // treatments match every other async surface (RB-30 §6).
+  if (loading || error || !article) {
     return (
-      <div className="min-h-screen bg-white dark:bg-neutral-950 flex items-center justify-center">
-        <div className="space-y-3 w-full max-w-reading px-6 animate-pulse" aria-busy="true" aria-label="Loading article">
-          <div className="h-8 bg-neutral-100 dark:bg-neutral-800 rounded-lg w-3/4" />
-          <div className="h-4 bg-neutral-100 dark:bg-neutral-800 rounded w-full" />
-          <div className="h-4 bg-neutral-100 dark:bg-neutral-800 rounded w-5/6" />
-          <div className="h-4 bg-neutral-100 dark:bg-neutral-800 rounded w-4/6" />
+      <div className="min-h-screen bg-white dark:bg-neutral-950 flex items-center justify-center p-8">
+        <div className="w-full max-w-reading">
+          <AsyncBoundary
+            loading={loading}
+            error={error || (!article ? 'This article is not available. The share link may have been revoked.' : null)}
+            errorTitle="Article not found"
+            label="Loading article"
+            className="space-y-3 animate-pulse"
+            skeleton={
+              <>
+                <div className="h-8 bg-neutral-100 dark:bg-neutral-800 rounded-lg w-3/4" />
+                <div className="h-4 bg-neutral-100 dark:bg-neutral-800 rounded w-full" />
+                <div className="h-4 bg-neutral-100 dark:bg-neutral-800 rounded w-5/6" />
+                <div className="h-4 bg-neutral-100 dark:bg-neutral-800 rounded w-4/6" />
+              </>
+            }
+          />
         </div>
-      </div>
-    );
-  }
-
-  if (error || !article) {
-    return (
-      <div className="min-h-screen bg-white dark:bg-neutral-950 flex flex-col items-center justify-center gap-4 p-8">
-        <AlertTriangle className="h-12 w-12 text-neutral-300" aria-hidden="true" />
-        <h1 className="text-xl font-semibold text-neutral-700 dark:text-neutral-300">
-          Article not found
-        </h1>
-        <p className="text-sm text-neutral-500 text-center max-w-reading">
-          {error || 'This article is not available. The share link may have been revoked.'}
-        </p>
       </div>
     );
   }

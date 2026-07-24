@@ -4,6 +4,7 @@ import { Shield, Settings, Users, Server, FileText } from 'lucide-react';
 import { PageLayout } from '@/components/works/templates/page-layout';
 import { Card, CardHeader, CardTitle, CardBody } from '@/components/works/atoms/card';
 import { Button } from '@/components/works/button';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 
 const USER_TYPES = [
   { id: 'INDIVIDUAL', label: 'Individual Contributor', desc: 'Focuses on executing work items and participating in their team framework.' },
@@ -16,15 +17,21 @@ const USER_TYPES = [
 export default function OperatingModelView({ workspaceId, api, onToast }) {
   const [policies, setPolicies] = useState(null);
   const [loading, setLoading] = useState(true);
+  // Before the AsyncBoundary rollout this view tracked `loading` but never rendered anything for it,
+  // and a failed load surfaced only as a transient toast — leaving the policy grid rendered as if
+  // every capability were allowed by default. Both states are now explicit (RB-30 §6).
+  const [error, setError] = useState(null);
 
   const loadPolicies = useCallback(() => {
     setLoading(true);
+    setError(null);
     api.raw(`/workspaces/${workspaceId}/operating-model`)
       .then(r => r.json())
       .then(data => {
         setPolicies(Array.isArray(data) ? data : []);
       })
       .catch(e => {
+        setError(e.message || 'Failed to load operating model policies');
         onToast?.(e.message || 'Failed to load operating model policies', 'error');
       })
       .finally(() => setLoading(false));
@@ -63,6 +70,17 @@ export default function OperatingModelView({ workspaceId, api, onToast }) {
       title="Operating Model"
       description="Restrict what each of the 5 core user types may do. Capabilities are allowed by default (subject to role); unchecking a box bars that user type from the action even when their role would allow it. It never grants more than a user's role."
     >
+      <AsyncBoundary
+        loading={loading}
+        error={error}
+        onRetry={loadPolicies}
+        errorTitle="Couldn't load the operating model"
+        label="Loading operating model policies"
+        className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4"
+        skeleton={USER_TYPES.map(type => (
+          <div key={type.id} className="h-64 rounded-xl bg-neutral-100 dark:bg-neutral-800 animate-pulse" />
+        ))}
+      >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
         {USER_TYPES.map(type => {
           return (
@@ -124,6 +142,7 @@ export default function OperatingModelView({ workspaceId, api, onToast }) {
           );
         })}
       </div>
+      </AsyncBoundary>
     </PageLayout>
   );
 }

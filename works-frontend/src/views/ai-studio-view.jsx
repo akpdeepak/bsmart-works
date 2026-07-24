@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Bot, Sparkles, MessageSquare, Play, Send, AlertCircle, Workflow, FileText } from 'lucide-react';
+import { Bot, Sparkles, MessageSquare, Play, Send, Workflow, FileText } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { Field } from '@/components/works/field';
 import { Badge } from '@/components/works/atoms/badge';
 import { EmptyState } from '@/components/works/atoms/empty-state';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { Skeleton } from '@/components/works/atoms/skeleton';
 import {
   assistantsClient, agentsClient, conversationalDashboardsClient, artifactsClient, aiVerdictLabel,
@@ -140,11 +141,22 @@ function AssistantsPanel({ workspaceId, notify }) {
 
   const active = assistants.find((a) => a.id === activeId);
 
-  if (loading) return <div className="space-y-3"><Skeleton className="h-10 w-64" /><Skeleton className="h-40 w-full" /></div>;
-  if (error) return <div role="alert" className="flex items-center gap-2 text-sm text-semantic-danger"><AlertCircle className="h-4 w-4" />{error}</div>;
-  if (assistants.length === 0) {
-    return <EmptyState icon={Bot} title="No assistants yet"
-      subtitle="A workspace admin can define a persona (e.g. a Compliance Assistant) in AI Control." />;
+  if (loading || error || assistants.length === 0) {
+    return (
+      <AsyncBoundary
+        loading={loading}
+        error={error}
+        onRetry={load}
+        errorTitle="Couldn't load assistants"
+        empty={assistants.length === 0}
+        emptyIcon={Bot}
+        emptyTitle="No assistants yet"
+        emptySubtitle="A workspace admin can define a persona (e.g. a Compliance Assistant) in AI Control."
+        label="Loading assistants"
+        className="space-y-3"
+        skeleton={<><Skeleton className="h-10 w-64" /><Skeleton className="h-40 w-full" /></>}
+      />
+    );
   }
 
   return (
@@ -261,22 +273,30 @@ function AgentsPanel({ workspaceId, notify }) {
 
       <div className="min-h-0 overflow-y-auto">
         <h3 className="mb-2 text-sm font-semibold">Recent runs</h3>
-        {loading ? <Skeleton className="h-24 w-full" />
-          : error ? <div role="alert" className="text-sm text-semantic-danger">{error}</div>
-          : runs.length === 0 ? <p className="text-sm text-neutral-500">No agent runs yet.</p>
-          : (
-            <ul className="space-y-2">
-              {runs.map((r) => (
-                <li key={r.id}>
-                  <Button unstyled type="button" onClick={() => agentsClient.getRun(workspaceId, r.id).then(setActive)}
-                    className="w-full rounded-md border border-neutral-200 p-2 text-left text-sm hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800">
-                    <span className="block truncate font-medium">{r.goal}</span>
-                    <span className="text-xs text-neutral-500">{r.stepCount} steps Â· {r.status}</span>
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
+        <AsyncBoundary
+          loading={loading}
+          error={error}
+          onRetry={load}
+          errorTitle="Couldn't load agent runs"
+          empty={runs.length === 0}
+          emptyIcon={Workflow}
+          emptyTitle="No agent runs yet"
+          emptySubtitle="Give the agent a goal above and run it to see the steps it takes."
+          label="Loading agent runs"
+          skeleton={<Skeleton className="h-24 w-full" />}
+        >
+          <ul className="space-y-2">
+            {runs.map((r) => (
+              <li key={r.id}>
+                <Button unstyled type="button" onClick={() => agentsClient.getRun(workspaceId, r.id).then(setActive)}
+                  className="w-full rounded-md border border-neutral-200 p-2 text-left text-sm hover:bg-neutral-50 dark:border-neutral-700 dark:hover:bg-neutral-800">
+                  <span className="block truncate font-medium">{r.goal}</span>
+                  <span className="text-xs text-neutral-500">{r.stepCount} steps Â· {r.status}</span>
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </AsyncBoundary>
       </div>
     </div>
   );

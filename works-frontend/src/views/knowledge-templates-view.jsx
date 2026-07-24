@@ -1,9 +1,10 @@
 import { Table } from '@/components/works/atoms/table';
 import { useState, useEffect, useCallback } from 'react';
-import { FileText, FilePlus2, Sparkles, AlertCircle, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { FileText, FilePlus2, Sparkles, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { Field } from '@/components/works/field';
 import { EmptyState } from '@/components/works/atoms/empty-state';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { templatesClient, extractionClient } from '@/lib/knowledge-advanced';
 import { KnowAiPanel } from '@/components/knowledge/KnowAiPanel';
 import { PageLayout } from '@/components/works/templates/page-layout';
@@ -91,21 +92,21 @@ export default function KnowledgeTemplatesView({ workspaceId, onUseTemplate, onT
           <h2 id="templates-heading" className="text-xl font-semibold text-neutral-900 dark:text-neutral-100 mb-3">
             Document templates
           </h2>
-          {loading ? (
-            <div className="space-y-2" aria-hidden="true">
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="h-16 rounded-lg animate-pulse bg-neutral-100 dark:bg-neutral-800" />
-              ))}
-            </div>
-          ) : error ? (
-            <div className="flex items-start gap-2 rounded-lg border border-semantic-danger/30 bg-semantic-danger/5 p-4 text-sm text-semantic-danger" role="alert">
-              <AlertCircle className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
-              <span>{error}</span>
-            </div>
-          ) : templates.length === 0 ? (
-            <EmptyState icon={FileText} title="No templates yet"
-              subtitle="Create a reusable template with {{placeholders}} that authors start new articles from." />
-          ) : (
+          <AsyncBoundary
+            loading={loading}
+            error={error}
+            onRetry={load}
+            errorTitle="Couldn't load templates"
+            empty={templates.length === 0}
+            emptyIcon={FileText}
+            emptyTitle="No templates yet"
+            emptySubtitle="Create a reusable template with {{placeholders}} that authors start new articles from."
+            label="Loading templates"
+            className="space-y-2"
+            skeleton={[0, 1, 2].map((i) => (
+              <div key={i} className="h-16 rounded-lg animate-pulse bg-neutral-100 dark:bg-neutral-800" />
+            ))}
+          >
             <ul className="space-y-2">
               {templates.map((t) => (
                 <li key={t.id}
@@ -154,7 +155,7 @@ export default function KnowledgeTemplatesView({ workspaceId, onUseTemplate, onT
                 </li>
               ))}
             </ul>
-          )}
+          </AsyncBoundary>
         </section>
 
         {/* ── Create template ── */}

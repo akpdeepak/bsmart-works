@@ -6,8 +6,8 @@ import com.bcits.works.shared.AuthenticatedUser;
 
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.EventService;
-import com.bcits.works.knowledge.KnowledgeSpace;
-import com.bcits.works.knowledge.KnowledgeSpaceRepository;
+import com.bcits.works.knowledge.api.KnowledgeSpace;
+import com.bcits.works.knowledge.api.KnowledgeSpaceRepository;
 import com.bcits.works.knowledge.SpaceFollowerController;
 import com.bcits.works.knowledge.SpaceFollowerService;
 

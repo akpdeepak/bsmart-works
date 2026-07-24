@@ -2,14 +2,14 @@ package com.bcits.works;
 import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
-import com.bcits.works.workitems.WorkItem;
-import com.bcits.works.workitems.WorkItemRepository;
+import com.bcits.works.workitems.api.WorkItem;
+import com.bcits.works.workitems.api.WorkItemRepository;
 import com.bcits.works.projects.Impediment;
 import com.bcits.works.projects.ImpedimentRepository;
 import com.bcits.works.projects.StandupEntryRepository;
 import com.bcits.works.projects.StandupSession;
 import com.bcits.works.projects.StandupSessionRepository;
-import com.bcits.works.messaging.ActionItemRepository;
+import com.bcits.works.messaging.api.ActionItemRepository;
 
 import org.springframework.stereotype.Service;
 

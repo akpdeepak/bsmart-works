@@ -7,7 +7,7 @@ import com.bcits.works.shared.RbacGate;
 import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.EventService;
-import com.bcits.works.ai.AiControlPlaneService;
+import com.bcits.works.ai.api.AiControlPlaneService;
 import com.bcits.works.automation.WebhookDelivery;
 
 import org.springframework.jdbc.core.JdbcTemplate;

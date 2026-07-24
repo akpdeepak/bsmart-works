@@ -1,6 +1,6 @@
 package com.bcits.works;
 
-import com.bcits.works.auth.TokenRevocationService;
+import com.bcits.works.auth.api.TokenRevocationService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

@@ -1,4 +1,6 @@
 package com.bcits.works.projects;
+import com.bcits.works.projects.api.CeremonySession;
+import com.bcits.works.projects.api.CeremonySessionRepository;
 
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.EventService;

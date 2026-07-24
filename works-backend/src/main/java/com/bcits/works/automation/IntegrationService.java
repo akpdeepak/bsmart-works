@@ -2,12 +2,12 @@ package com.bcits.works.automation;
 
 import com.bcits.works.shared.AutomationCatalog;
 import com.bcits.works.AutomationService;
-import com.bcits.works.projects.Project;
-import com.bcits.works.projects.ProjectRepository;
+import com.bcits.works.projects.api.Project;
+import com.bcits.works.projects.api.ProjectRepository;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.EventService;
-import com.bcits.works.workitems.WorkItem;
-import com.bcits.works.workitems.WorkItemRepository;
+import com.bcits.works.workitems.api.WorkItem;
+import com.bcits.works.workitems.api.WorkItemRepository;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

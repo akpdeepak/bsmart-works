@@ -1,4 +1,5 @@
 package com.bcits.works.knowledge;
+import com.bcits.works.knowledge.api.KnowledgeSpaceRepository;
 
 import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.RbacGate;

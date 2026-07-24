@@ -1,4 +1,7 @@
 package com.bcits.works.workitems;
+import com.bcits.works.workitems.api.StatusCategoryResolver;
+import com.bcits.works.workitems.api.StatusConfigService;
+import com.bcits.works.workitems.api.WorkflowStatus;
 
 import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.RbacGate;

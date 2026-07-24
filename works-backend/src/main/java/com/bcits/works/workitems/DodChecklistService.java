@@ -1,4 +1,6 @@
 package com.bcits.works.workitems;
+import com.bcits.works.workitems.api.WorkItem;
+import com.bcits.works.workitems.api.WorkItemRepository;
 
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.EventService;

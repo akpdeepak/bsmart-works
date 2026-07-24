@@ -1,10 +1,10 @@
 package com.bcits.works.ai;
 
-import com.bcits.works.knowledge.Article;
+import com.bcits.works.knowledge.api.Article;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.BqlCompiler;
-import com.bcits.works.workitems.WorkItem;
-import com.bcits.works.workspaces.Team;
+import com.bcits.works.workitems.api.WorkItem;
+import com.bcits.works.workspaces.api.Team;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

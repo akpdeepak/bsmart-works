@@ -1,4 +1,10 @@
 package com.bcits.works.messaging;
+import com.bcits.works.messaging.api.ActionItem;
+import com.bcits.works.messaging.api.ActionItemRepository;
+import com.bcits.works.messaging.api.ChatConversation;
+import com.bcits.works.messaging.api.ChatConversationRepository;
+import com.bcits.works.messaging.api.ChatMessage;
+import com.bcits.works.messaging.api.ChatMessageRepository;
 
 import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.RbacGate;

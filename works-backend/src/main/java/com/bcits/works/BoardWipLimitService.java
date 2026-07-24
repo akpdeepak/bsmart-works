@@ -1,7 +1,7 @@
 package com.bcits.works;
 
 import com.bcits.works.shared.ApiException;
-import com.bcits.works.workitems.StatusCategoryResolver;
+import com.bcits.works.workitems.api.StatusCategoryResolver;
 import com.bcits.works.projects.BoardWipLimit;
 import com.bcits.works.projects.BoardWipLimitRepository;
 

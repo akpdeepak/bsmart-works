@@ -1,9 +1,9 @@
 package com.bcits.works.devsync;
 
 import com.bcits.works.AiCapabilities;
-import com.bcits.works.automation.CalendarSyncService;
+import com.bcits.works.automation.api.CalendarSyncService;
 import com.bcits.works.FocusModeService;
-import com.bcits.works.ai.AiControlPlaneService;
+import com.bcits.works.ai.api.AiControlPlaneService;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.RbacGate;
 

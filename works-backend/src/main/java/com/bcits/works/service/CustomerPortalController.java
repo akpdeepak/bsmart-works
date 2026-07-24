@@ -2,15 +2,15 @@ package com.bcits.works.service;
 
 import com.bcits.works.shared.AutomationCatalog;
 import com.bcits.works.AutomationService;
-import com.bcits.works.projects.Project;
-import com.bcits.works.projects.ProjectRepository;
+import com.bcits.works.projects.api.Project;
+import com.bcits.works.projects.api.ProjectRepository;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.EventService;
 import com.bcits.works.shared.TenantScope;
-import com.bcits.works.sla.CustomerSlaTier;
-import com.bcits.works.sla.CustomerSlaTierRepository;
-import com.bcits.works.workitems.WorkItem;
-import com.bcits.works.workitems.WorkItemRepository;
+import com.bcits.works.sla.api.CustomerSlaTier;
+import com.bcits.works.sla.api.CustomerSlaTierRepository;
+import com.bcits.works.workitems.api.WorkItem;
+import com.bcits.works.workitems.api.WorkItemRepository;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

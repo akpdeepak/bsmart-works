@@ -1,16 +1,16 @@
 package com.bcits.works.service;
 
-import com.bcits.works.ai.AiControlPlaneService;
-import com.bcits.works.ai.AiModelTier;
+import com.bcits.works.ai.api.AiControlPlaneService;
+import com.bcits.works.ai.api.AiModelTier;
 import com.bcits.works.auth.RbacService;
-import com.bcits.works.messaging.ChatAiDraft;
-import com.bcits.works.messaging.ChatAiDraftRepository;
-import com.bcits.works.messaging.ChatConversation;
-import com.bcits.works.messaging.ChatConversationRepository;
-import com.bcits.works.messaging.ChatMessage;
-import com.bcits.works.messaging.ChatMessageRepository;
-import com.bcits.works.messaging.NotificationBatchService;
-import com.bcits.works.security.CustomerAttributionPiiService;
+import com.bcits.works.messaging.api.ChatAiDraft;
+import com.bcits.works.messaging.api.ChatAiDraftRepository;
+import com.bcits.works.messaging.api.ChatConversation;
+import com.bcits.works.messaging.api.ChatConversationRepository;
+import com.bcits.works.messaging.api.ChatMessage;
+import com.bcits.works.messaging.api.ChatMessageRepository;
+import com.bcits.works.messaging.api.NotificationBatchService;
+import com.bcits.works.security.api.CustomerAttributionPiiService;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.EventService;
 

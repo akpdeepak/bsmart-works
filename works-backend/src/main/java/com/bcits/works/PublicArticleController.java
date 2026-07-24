@@ -2,8 +2,8 @@ package com.bcits.works;
 
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.TenantScope;
-import com.bcits.works.knowledge.Article;
-import com.bcits.works.knowledge.ArticleRepository;
+import com.bcits.works.knowledge.api.Article;
+import com.bcits.works.knowledge.api.ArticleRepository;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;

@@ -3,7 +3,7 @@ import com.bcits.works.workspaces.ConfigExtensionPoints;
 import com.bcits.works.workspaces.ConfigService;
 
 import com.bcits.works.shared.EventService;
-import com.bcits.works.workitems.WorkItem;
+import com.bcits.works.workitems.api.WorkItem;
 import com.bcits.works.workitems.WorkItemConditionExpression;
 
 import com.fasterxml.jackson.core.type.TypeReference;

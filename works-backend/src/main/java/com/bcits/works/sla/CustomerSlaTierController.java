@@ -1,4 +1,6 @@
 package com.bcits.works.sla;
+import com.bcits.works.sla.api.CustomerSlaTier;
+import com.bcits.works.sla.api.CustomerSlaTierRepository;
 
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.AuthenticatedUser;

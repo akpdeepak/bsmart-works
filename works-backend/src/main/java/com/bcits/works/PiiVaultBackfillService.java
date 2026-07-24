@@ -6,19 +6,19 @@ import com.bcits.works.service.CustomerFeedback;
 
 
 
-import com.bcits.works.messaging.ChatConversation;
-import com.bcits.works.messaging.ChatConversationRepository;
+import com.bcits.works.messaging.api.ChatConversation;
+import com.bcits.works.messaging.api.ChatConversationRepository;
 
 import com.bcits.works.workitems.WorkItemFieldValue;
 import com.bcits.works.workitems.WorkItemFieldValueRepository;
-import com.bcits.works.auth.User;
-import com.bcits.works.auth.UserPiiService;
-import com.bcits.works.auth.UserRepository;
+import com.bcits.works.auth.api.User;
+import com.bcits.works.auth.api.UserPiiService;
+import com.bcits.works.auth.api.UserRepository;
 import com.bcits.works.shared.PiiVaultService;
 import com.bcits.works.shared.TenantScope;
-import com.bcits.works.security.CustomerUserPiiService;
-import com.bcits.works.security.StakeholderPiiService;
-import com.bcits.works.security.CustomerAttributionPiiService;
+import com.bcits.works.security.api.CustomerUserPiiService;
+import com.bcits.works.security.api.StakeholderPiiService;
+import com.bcits.works.security.api.CustomerAttributionPiiService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

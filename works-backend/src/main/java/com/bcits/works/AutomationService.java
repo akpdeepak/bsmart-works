@@ -6,17 +6,17 @@ import com.bcits.works.shared.BqlException;
 import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.EventService;
-import com.bcits.works.workitems.WorkItem;
+import com.bcits.works.workitems.api.WorkItem;
 import com.bcits.works.workitems.WorkItemConditionExpression;
-import com.bcits.works.workitems.WorkItemRepository;
-import com.bcits.works.projects.ProjectRepository;
-import com.bcits.works.ai.AiControlPlaneService;
+import com.bcits.works.workitems.api.WorkItemRepository;
+import com.bcits.works.projects.api.ProjectRepository;
+import com.bcits.works.ai.api.AiControlPlaneService;
 import com.bcits.works.automation.AutomationRule;
 import com.bcits.works.automation.AutomationRuleRepository;
 import com.bcits.works.automation.AutomationRun;
 import com.bcits.works.automation.AutomationRunRepository;
-import com.bcits.works.messaging.Comment;
-import com.bcits.works.messaging.CommentRepository;
+import com.bcits.works.messaging.api.Comment;
+import com.bcits.works.messaging.api.CommentRepository;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

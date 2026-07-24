@@ -5,12 +5,12 @@ import com.bcits.works.auth.ScimController;
 import com.bcits.works.auth.ScimToken;
 
 import com.bcits.works.auth.ScimTokenRepository;
-import com.bcits.works.auth.UserRepository;
+import com.bcits.works.auth.api.UserRepository;
 
 import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.EventService;
-import com.bcits.works.auth.UserPiiService;
+import com.bcits.works.auth.api.UserPiiService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

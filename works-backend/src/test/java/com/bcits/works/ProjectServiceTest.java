@@ -3,13 +3,13 @@ package com.bcits.works;
 import com.bcits.works.shared.CurrentWorkspace;
 
 import com.bcits.works.auth.RbacService;
-import com.bcits.works.auth.UserRepository;
+import com.bcits.works.auth.api.UserRepository;
 
 import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.EventService;
-import com.bcits.works.projects.Project;
-import com.bcits.works.projects.ProjectRepository;
+import com.bcits.works.projects.api.Project;
+import com.bcits.works.projects.api.ProjectRepository;
 import com.bcits.works.projects.ProjectService;
 
 import org.junit.jupiter.api.Tag;

@@ -1,23 +1,23 @@
 package com.bcits.works.shared;
 
-import com.bcits.works.messaging.Comment;
-import com.bcits.works.messaging.CommentRepository;
+import com.bcits.works.messaging.api.Comment;
+import com.bcits.works.messaging.api.CommentRepository;
 import com.bcits.works.security.ComplianceRule;
 import com.bcits.works.security.ComplianceRuleRepository;
 import com.bcits.works.projects.CrossProjectDependency;
 import com.bcits.works.projects.CrossProjectDependencyRepository;
 import com.bcits.works.reporting.Dashboard;
 import com.bcits.works.reporting.DashboardRepository;
-import com.bcits.works.knowledge.KnowledgeSpace;
-import com.bcits.works.knowledge.KnowledgeSpaceRepository;
+import com.bcits.works.knowledge.api.KnowledgeSpace;
+import com.bcits.works.knowledge.api.KnowledgeSpaceRepository;
 import com.bcits.works.reporting.MetricSnapshot;
 import com.bcits.works.reporting.MetricSnapshotRepository;
-import com.bcits.works.projects.Project;
-import com.bcits.works.projects.ProjectRepository;
+import com.bcits.works.projects.api.Project;
+import com.bcits.works.projects.api.ProjectRepository;
 import com.bcits.works.sla.SlaPolicy;
 import com.bcits.works.sla.SlaPolicyRepository;
-import com.bcits.works.workitems.WorkItem;
-import com.bcits.works.workitems.WorkItemRepository;
+import com.bcits.works.workitems.api.WorkItem;
+import com.bcits.works.workitems.api.WorkItemRepository;
 
 
 

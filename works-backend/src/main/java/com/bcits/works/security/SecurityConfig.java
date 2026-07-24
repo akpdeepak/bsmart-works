@@ -1,7 +1,7 @@
 package com.bcits.works.security;
 
-import com.bcits.works.auth.JwtUtil;
-import com.bcits.works.auth.TokenRevocationService;
+import com.bcits.works.auth.api.JwtUtil;
+import com.bcits.works.auth.api.TokenRevocationService;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;

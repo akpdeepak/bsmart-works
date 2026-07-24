@@ -1,9 +1,9 @@
 package com.bcits.works.security;
 
-import com.bcits.works.auth.TokenRevocationService;
-import com.bcits.works.auth.User;
-import com.bcits.works.auth.UserPiiService;
-import com.bcits.works.auth.UserRepository;
+import com.bcits.works.auth.api.TokenRevocationService;
+import com.bcits.works.auth.api.User;
+import com.bcits.works.auth.api.UserPiiService;
+import com.bcits.works.auth.api.UserRepository;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.SecurityAuditLogService;
 

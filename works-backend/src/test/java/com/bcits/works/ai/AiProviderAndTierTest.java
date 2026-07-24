@@ -1,4 +1,6 @@
 package com.bcits.works.ai;
+import com.bcits.works.ai.api.AiProvider;
+import com.bcits.works.ai.api.AiModelTier;
 import com.bcits.works.AiCapabilities;
 
 import org.junit.jupiter.api.Tag;

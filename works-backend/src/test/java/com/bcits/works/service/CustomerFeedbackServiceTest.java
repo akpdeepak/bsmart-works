@@ -1,6 +1,6 @@
 package com.bcits.works.service;
 
-import com.bcits.works.security.CustomerAttributionPiiService;
+import com.bcits.works.security.api.CustomerAttributionPiiService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

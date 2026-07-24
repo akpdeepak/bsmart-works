@@ -5,7 +5,7 @@ import com.bcits.works.auth.RbacService;
 import com.bcits.works.shared.AuthenticatedUser;
 
 import com.bcits.works.shared.ApiException;
-import com.bcits.works.security.CustomerAttributionPiiService;
+import com.bcits.works.security.api.CustomerAttributionPiiService;
 import com.bcits.works.service.SupportChatAgentController;
 import com.bcits.works.service.SupportChatService;
 

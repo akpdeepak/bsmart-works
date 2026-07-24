@@ -5,13 +5,13 @@ import com.bcits.works.auth.RbacService;
 import com.bcits.works.shared.AuthenticatedUser;
 
 import com.bcits.works.shared.EventService;
-import com.bcits.works.workitems.StatusConfigService;
-import com.bcits.works.workitems.WorkItemRepository;
-import com.bcits.works.workitems.WorkflowStatus;
-import com.bcits.works.projects.Sprint;
+import com.bcits.works.workitems.api.StatusConfigService;
+import com.bcits.works.workitems.api.WorkItemRepository;
+import com.bcits.works.workitems.api.WorkflowStatus;
+import com.bcits.works.projects.api.Sprint;
 import com.bcits.works.projects.SprintController;
 import com.bcits.works.projects.SprintDao;
-import com.bcits.works.projects.SprintRepository;
+import com.bcits.works.projects.api.SprintRepository;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;

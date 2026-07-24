@@ -1,8 +1,8 @@
 package com.bcits.works.reporting;
 
 import com.bcits.works.EmailService;
-import com.bcits.works.workspaces.SavedView;
-import com.bcits.works.workspaces.SavedViewRepository;
+import com.bcits.works.workspaces.api.SavedView;
+import com.bcits.works.workspaces.api.SavedViewRepository;
 import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;
@@ -10,10 +10,10 @@ import com.bcits.works.shared.BqlContext;
 
 import com.bcits.works.shared.BqlContextFactory;
 import com.bcits.works.shared.BqlExecutionService;
-import com.bcits.works.security.BqlRunAudit;
-import com.bcits.works.security.BqlRunAuditService;
-import com.bcits.works.messaging.Notification;
-import com.bcits.works.messaging.NotificationRepository;
+import com.bcits.works.security.api.BqlRunAudit;
+import com.bcits.works.security.api.BqlRunAuditService;
+import com.bcits.works.messaging.api.Notification;
+import com.bcits.works.messaging.api.NotificationRepository;
 
 import java.time.OffsetDateTime;
 import java.util.List;

@@ -1,6 +1,8 @@
 package com.bcits.works;
 
 
+import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -16,6 +18,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAnyPackage;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
@@ -181,6 +184,59 @@ class ArchitectureTest {
                 .orShould().dependOnClassesThat().haveSimpleName("Stakeholder")
                 .because("the immutable event log + audit chain must carry only ids/tokens, never raw PII (RB-40 §3 rule 1)")
                 .check(appClasses);
+    }
+
+    @Test
+    void everyModuleWithCrossModuleConsumersPublishesAnApiPackage() {
+        // The api/internal split is only meaningful if the api packages exist and are marked. A
+        // module with no cross-module consumers legitimately has none (devsync, reporting, service
+        // today) — this asserts the marker for the ones that do.
+        List<String> missing = MODULE_PACKAGES.stream()
+                .filter(module -> Files.isDirectory(MODULE_ROOT.resolve(module).resolve("api")))
+                .filter(module -> !Files.exists(MODULE_ROOT.resolve(module).resolve("api").resolve("package-info.java")))
+                .toList();
+        assertThat(missing)
+                .as("every published module api needs a package marker documenting the contract")
+                .isEmpty();
+    }
+
+    @Test
+    void crossModuleAccessGoesThroughApi() {
+        // W2-a, the "API-first modular monolith" boundary (EPIC-03 Phase 2 §1, GH-537).
+        //
+        // Each domain module publishes com.bcits.works.<module>.api; everything else in the module is
+        // internal. A module may only reach another module through that api package.
+        //
+        // `shared` is exempt as a TARGET: it is the kernel, public to everyone by definition, and is
+        // already constrained in the other direction by sharedKernelDoesNotDependOnDomainModules.
+        // The flat root is not a module and is excluded on both sides — it is the temporary
+        // composition layer the carve is still draining (see the ratchet above).
+        for (String consumer : MODULE_PACKAGES) {
+            if (consumer.equals("shared")) {
+                continue;
+            }
+            List<String> others = MODULE_PACKAGES.stream()
+                    .filter(target -> !target.equals(consumer))
+                    .filter(target -> !target.equals("shared"))
+                    .toList();
+            String[] anywhereInThem = others.stream()
+                    .map(target -> "com.bcits.works." + target + "..").toArray(String[]::new);
+            String[] theirApis = others.stream()
+                    .map(target -> "com.bcits.works." + target + ".api..").toArray(String[]::new);
+
+            // "inside another module but outside its api" — expressed as a predicate rather than by
+            // naming the module root package, so a future internal sub-package is covered too.
+            DescribedPredicate<JavaClass> anotherModulesInternals =
+                    resideInAnyPackage(anywhereInThem)
+                            .and(DescribedPredicate.not(resideInAnyPackage(theirApis)))
+                            .as("internals of another module");
+
+            noClasses().that().resideInAPackage("com.bcits.works." + consumer + "..")
+                    .should().dependOnClassesThat(anotherModulesInternals)
+                    .because("module " + consumer + " must reach other modules only through their"
+                            + " .api packages, never their internals (EPIC-03 Phase 2 W2-a)")
+                    .check(appClasses);
+        }
     }
 
     @Test

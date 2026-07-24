@@ -1,6 +1,6 @@
 package com.bcits.works.service;
 
-import com.bcits.works.sla.CustomerSlaTier;
+import com.bcits.works.sla.api.CustomerSlaTier;
 
 import org.springframework.stereotype.Service;
 import java.time.OffsetDateTime;

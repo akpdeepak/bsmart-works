@@ -9,7 +9,7 @@ import com.bcits.works.shared.PageResponse;
 import com.bcits.works.reporting.DashboardSuggestionService;
 import com.bcits.works.reporting.DashboardSummaryService;
 import com.bcits.works.ai.AiBudget;
-import com.bcits.works.ai.AiControlPlaneService;
+import com.bcits.works.ai.api.AiControlPlaneService;
 import com.bcits.works.ai.AiInvocation;
 import com.bcits.works.ai.AiInvocationRepository;
 import com.bcits.works.ai.AiPolicy;

@@ -1,6 +1,6 @@
 package com.bcits.works;
 
-import com.bcits.works.auth.JwtUtil;
+import com.bcits.works.auth.api.JwtUtil;
 
 import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.BeforeEach;

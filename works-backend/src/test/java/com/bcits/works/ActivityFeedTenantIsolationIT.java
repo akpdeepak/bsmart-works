@@ -1,6 +1,6 @@
 package com.bcits.works;
 
-import com.bcits.works.auth.UserPiiService;
+import com.bcits.works.auth.api.UserPiiService;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.RbacGate;

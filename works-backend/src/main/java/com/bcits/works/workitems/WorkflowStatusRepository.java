@@ -1,4 +1,5 @@
 package com.bcits.works.workitems;
+import com.bcits.works.workitems.api.WorkflowStatus;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;

@@ -2,7 +2,7 @@ package com.bcits.works.automation;
 
 import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.RbacGate;
-import com.bcits.works.workitems.WorkItem;
+import com.bcits.works.workitems.api.WorkItem;
 
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;

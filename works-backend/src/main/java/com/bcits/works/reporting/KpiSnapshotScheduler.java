@@ -1,8 +1,8 @@
 package com.bcits.works.reporting;
 
 import com.bcits.works.shared.TenantScope;
-import com.bcits.works.workspaces.Workspace;
-import com.bcits.works.workspaces.WorkspaceRepository;
+import com.bcits.works.workspaces.api.Workspace;
+import com.bcits.works.workspaces.api.WorkspaceRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

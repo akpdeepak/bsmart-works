@@ -1,7 +1,7 @@
 package com.bcits.works.workspaces;
 
-import com.bcits.works.projects.ProjectTeamMember;
-import com.bcits.works.projects.ProjectTeamMemberRepository;
+import com.bcits.works.projects.api.ProjectTeamMember;
+import com.bcits.works.projects.api.ProjectTeamMemberRepository;
 import com.bcits.works.TodayLayoutService;
 
 

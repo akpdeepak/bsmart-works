@@ -1,7 +1,8 @@
 package com.bcits.works.workspaces;
+import com.bcits.works.workspaces.api.SavedView;
 
 import com.bcits.works.shared.AuthenticatedUser;
-import com.bcits.works.security.BqlRunAudit;
+import com.bcits.works.security.api.BqlRunAudit;
 
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;

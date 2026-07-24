@@ -2,17 +2,17 @@ package com.bcits.works.ai;
 
 import com.bcits.works.shared.AutomationCatalog;
 import com.bcits.works.AutomationService;
-import com.bcits.works.messaging.Comment;
-import com.bcits.works.messaging.CommentRepository;
-import com.bcits.works.auth.User;
-import com.bcits.works.auth.UserRepository;
-import com.bcits.works.projects.Project;
-import com.bcits.works.projects.ProjectRepository;
+import com.bcits.works.messaging.api.Comment;
+import com.bcits.works.messaging.api.CommentRepository;
+import com.bcits.works.auth.api.User;
+import com.bcits.works.auth.api.UserRepository;
+import com.bcits.works.projects.api.Project;
+import com.bcits.works.projects.api.ProjectRepository;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.EventService;
 import com.bcits.works.shared.RbacGate;
-import com.bcits.works.workitems.WorkItem;
-import com.bcits.works.workitems.WorkItemRepository;
+import com.bcits.works.workitems.api.WorkItem;
+import com.bcits.works.workitems.api.WorkItemRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

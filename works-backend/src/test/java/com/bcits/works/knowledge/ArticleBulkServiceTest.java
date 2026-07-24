@@ -1,4 +1,8 @@
 package com.bcits.works.knowledge;
+import com.bcits.works.knowledge.api.Article;
+import com.bcits.works.knowledge.api.ArticleRepository;
+import com.bcits.works.knowledge.api.KnowledgeSpace;
+import com.bcits.works.knowledge.api.KnowledgeSpaceRepository;
 
 import com.bcits.works.WebhookService;
 import com.bcits.works.shared.ApiException;

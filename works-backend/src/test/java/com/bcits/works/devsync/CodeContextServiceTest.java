@@ -1,13 +1,13 @@
 package com.bcits.works.devsync;
 
 import com.bcits.works.auth.RbacService;
-import com.bcits.works.auth.UserRepository;
+import com.bcits.works.auth.api.UserRepository;
 
 import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.EventService;
-import com.bcits.works.workitems.WorkItem;
-import com.bcits.works.workitems.WorkItemRepository;
+import com.bcits.works.workitems.api.WorkItem;
+import com.bcits.works.workitems.api.WorkItemRepository;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

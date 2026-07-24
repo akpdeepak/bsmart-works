@@ -5,9 +5,9 @@ import com.bcits.works.auth.RbacService;
 import com.bcits.works.shared.AuthenticatedUser;
 
 import com.bcits.works.shared.ApiException;
-import com.bcits.works.messaging.ActionItem;
+import com.bcits.works.messaging.api.ActionItem;
 import com.bcits.works.messaging.ActionItemController;
-import com.bcits.works.messaging.ActionItemRepository;
+import com.bcits.works.messaging.api.ActionItemRepository;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

@@ -1,6 +1,6 @@
 package com.bcits.works;
 
-import com.bcits.works.workspaces.Team;
+import com.bcits.works.workspaces.api.Team;
 import com.bcits.works.workspaces.TeamService;
 
 import org.junit.jupiter.api.Tag;

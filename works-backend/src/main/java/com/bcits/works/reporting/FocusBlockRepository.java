@@ -1,4 +1,5 @@
 package com.bcits.works.reporting;
+import com.bcits.works.reporting.api.FocusBlock;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.time.OffsetDateTime;

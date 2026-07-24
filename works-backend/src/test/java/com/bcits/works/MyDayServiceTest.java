@@ -3,14 +3,14 @@ package com.bcits.works;
 import com.bcits.works.auth.RbacService;
 
 import com.bcits.works.shared.ApiException;
-import com.bcits.works.workitems.WorkItem;
-import com.bcits.works.workitems.WorkItemRepository;
+import com.bcits.works.workitems.api.WorkItem;
+import com.bcits.works.workitems.api.WorkItemRepository;
 import com.bcits.works.projects.Impediment;
 import com.bcits.works.projects.ImpedimentRepository;
 import com.bcits.works.projects.StandupEntryRepository;
 import com.bcits.works.projects.StandupSessionRepository;
-import com.bcits.works.messaging.ActionItem;
-import com.bcits.works.messaging.ActionItemRepository;
+import com.bcits.works.messaging.api.ActionItem;
+import com.bcits.works.messaging.api.ActionItemRepository;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

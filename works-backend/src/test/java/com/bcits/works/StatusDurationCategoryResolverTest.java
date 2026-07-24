@@ -1,5 +1,5 @@
 package com.bcits.works;
-import com.bcits.works.workitems.StatusCategoryResolver;
+import com.bcits.works.workitems.api.StatusCategoryResolver;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

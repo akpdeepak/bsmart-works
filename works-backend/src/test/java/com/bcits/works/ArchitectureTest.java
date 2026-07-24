@@ -1,16 +1,4 @@
 package com.bcits.works;
-import com.bcits.works.auth.api.CustomerUser;
-import com.bcits.works.auth.api.Stakeholder;
-import com.bcits.works.auth.api.User;
-import com.bcits.works.projects.api.Project;
-import com.bcits.works.shared.AppEvent;
-import com.bcits.works.shared.EventService;
-import com.bcits.works.shared.SecurityAuditLogService;
-import com.bcits.works.workitems.WorkItemBulkRequest;
-import com.bcits.works.workitems.WorkItemCommandService;
-import com.bcits.works.workitems.WorkItemController;
-import com.bcits.works.workitems.WorkItemEngagementService;
-import com.bcits.works.workitems.WorkItemReadService;
 
 
 import com.tngtech.archunit.base.DescribedPredicate;

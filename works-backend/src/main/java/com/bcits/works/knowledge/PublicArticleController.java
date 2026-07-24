@@ -1,5 +1,4 @@
 package com.bcits.works.knowledge;
-import com.bcits.works.reporting.PublicDashboardController;
 
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.TenantScope;

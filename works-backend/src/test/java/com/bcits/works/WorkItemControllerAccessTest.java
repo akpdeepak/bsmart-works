@@ -1,6 +1,5 @@
 package com.bcits.works;
 import com.bcits.works.auth.api.EmailService;
-import com.bcits.works.workitems.TeamSequenceGenerator;
 import com.bcits.works.workitems.api.FunnelService;
 
 import com.bcits.works.auth.RbacService;

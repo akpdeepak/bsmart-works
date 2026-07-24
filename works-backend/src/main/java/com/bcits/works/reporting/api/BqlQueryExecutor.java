@@ -1,6 +1,5 @@
 package com.bcits.works.reporting.api;
 import com.bcits.works.shared.BqlException;
-import com.bcits.works.workspaces.api.Workspace;
 
 import com.bcits.works.shared.BqlContext;
 

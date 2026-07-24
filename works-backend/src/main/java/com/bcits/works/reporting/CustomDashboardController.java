@@ -1,6 +1,4 @@
 package com.bcits.works.reporting;
-import com.bcits.works.TodayLayoutService;
-import com.bcits.works.auth.api.User;
 import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;

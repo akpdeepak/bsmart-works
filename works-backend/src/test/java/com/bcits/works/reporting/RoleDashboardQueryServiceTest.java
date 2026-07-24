@@ -1,5 +1,4 @@
 package com.bcits.works.reporting;
-import com.bcits.works.projects.api.Sprint;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;

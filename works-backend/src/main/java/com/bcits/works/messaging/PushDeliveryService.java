@@ -1,5 +1,4 @@
 package com.bcits.works.messaging;
-import com.bcits.works.messaging.api.NotificationBatchService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

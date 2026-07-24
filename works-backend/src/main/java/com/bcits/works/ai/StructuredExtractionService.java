@@ -1,5 +1,4 @@
 package com.bcits.works.ai;
-import com.bcits.works.AiCapabilities;
 import com.bcits.works.ai.api.AiControlPlaneService;
 
 import org.springframework.stereotype.Service;

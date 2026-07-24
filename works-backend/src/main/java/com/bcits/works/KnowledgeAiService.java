@@ -1,5 +1,4 @@
 package com.bcits.works;
-import com.bcits.works.workspaces.api.Workspace;
 import com.bcits.works.ai.AiAssistService;
 import com.bcits.works.ai.api.AiControlPlaneService;
 

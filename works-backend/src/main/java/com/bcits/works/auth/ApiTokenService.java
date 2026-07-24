@@ -1,5 +1,4 @@
 package com.bcits.works.auth;
-import com.bcits.works.workspaces.api.Workspace;
 
 import com.bcits.works.shared.ApiException;
 

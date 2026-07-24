@@ -1,6 +1,4 @@
 package com.bcits.works.ai;
-import com.bcits.works.messaging.api.Comment;
-import com.bcits.works.projects.Release;
 
 import com.bcits.works.knowledge.api.Article;
 import com.bcits.works.shared.ApiException;

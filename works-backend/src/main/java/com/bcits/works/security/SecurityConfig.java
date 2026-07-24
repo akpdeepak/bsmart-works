@@ -1,7 +1,4 @@
 package com.bcits.works.security;
-import com.bcits.works.auth.ScimController;
-import com.bcits.works.reporting.PublicDashboardController;
-import com.bcits.works.service.CustomerContext;
 
 import com.bcits.works.auth.api.JwtUtil;
 import com.bcits.works.auth.api.TokenRevocationService;

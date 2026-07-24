@@ -1,5 +1,4 @@
 package com.bcits.works;
-import com.bcits.works.shared.api.Risk;
 import com.bcits.works.reporting.Report;
 import com.bcits.works.reporting.ReportRepository;
 

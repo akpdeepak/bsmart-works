@@ -1,5 +1,4 @@
 package com.bcits.works.ai;
-import com.bcits.works.workspaces.api.Workspace;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

@@ -1,6 +1,4 @@
 package com.bcits.works.messaging;
-import com.bcits.works.messaging.api.Comment;
-import com.bcits.works.workspaces.api.Workspace;
 
 import com.bcits.works.knowledge.api.KnowledgeWorkspaceSettings;
 import com.bcits.works.shared.EventService;

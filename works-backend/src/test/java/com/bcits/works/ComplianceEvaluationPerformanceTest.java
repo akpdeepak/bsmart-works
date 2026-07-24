@@ -1,7 +1,4 @@
 package com.bcits.works;
-import com.bcits.works.auth.api.User;
-import com.bcits.works.projects.api.Project;
-import com.bcits.works.workspaces.api.Workspace;
 import com.bcits.works.security.ComplianceEvaluationService;
 import com.bcits.works.security.ComplianceRule;
 import com.bcits.works.security.ComplianceRuleRepository;

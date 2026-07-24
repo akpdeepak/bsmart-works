@@ -1,5 +1,4 @@
 package com.bcits.works.workspaces;
-import com.bcits.works.projects.api.Project;
 import com.bcits.works.workspaces.api.Workspace;
 import com.bcits.works.workspaces.api.WorkspaceRepository;
 

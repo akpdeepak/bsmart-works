@@ -1,6 +1,5 @@
 package com.bcits.works.sla;
 import com.bcits.works.service.ServiceRequestService;
-import com.bcits.works.workspaces.api.Workspace;
 import com.bcits.works.sla.api.CustomerSlaTier;
 import com.bcits.works.sla.api.CustomerSlaTierRepository;
 

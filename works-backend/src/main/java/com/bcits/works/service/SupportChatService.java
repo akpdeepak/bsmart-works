@@ -1,5 +1,4 @@
 package com.bcits.works.service;
-import com.bcits.works.workspaces.api.Workspace;
 
 import com.bcits.works.ai.api.AiControlPlaneService;
 import com.bcits.works.messaging.api.ChatAiDraft;

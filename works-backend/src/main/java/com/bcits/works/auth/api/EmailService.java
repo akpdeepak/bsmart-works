@@ -1,7 +1,5 @@
 package com.bcits.works.auth.api;
 
-import com.bcits.works.auth.api.User;
-import com.bcits.works.auth.api.UserRepository;
 
 
 

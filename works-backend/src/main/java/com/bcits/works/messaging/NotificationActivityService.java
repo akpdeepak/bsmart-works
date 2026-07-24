@@ -1,5 +1,4 @@
 package com.bcits.works.messaging;
-import com.bcits.works.workspaces.api.Workspace;
 import com.bcits.works.messaging.api.Notification;
 import com.bcits.works.messaging.api.NotificationRepository;
 

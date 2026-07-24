@@ -1,5 +1,4 @@
 package com.bcits.works.security;
-import com.bcits.works.workspaces.api.Workspace;
 
 import com.bcits.works.auth.api.TokenRevocationService;
 import com.bcits.works.auth.api.User;

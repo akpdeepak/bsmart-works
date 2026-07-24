@@ -1,5 +1,4 @@
 package com.bcits.works.reporting;
-import com.bcits.works.workspaces.api.Team;
 
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.AuthenticatedUser;

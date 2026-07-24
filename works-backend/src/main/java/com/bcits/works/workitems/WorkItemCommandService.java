@@ -1,6 +1,4 @@
 package com.bcits.works.workitems;
-import com.bcits.works.auth.api.UserPiiService;
-import com.bcits.works.workspaces.api.Workspace;
 import com.bcits.works.workitems.api.StatusConfigService;
 import com.bcits.works.workitems.api.WorkItem;
 import com.bcits.works.workitems.api.WorkItemRepository;
@@ -10,7 +8,6 @@ import com.bcits.works.shared.AutomationCatalog;
 import com.bcits.works.AutomationService;
 import com.bcits.works.BoardWipLimitService;
 import com.bcits.works.shared.ConcurrencyGuard;
-import com.bcits.works.workitems.DefaultWorkItemTypes;
 import com.bcits.works.workitems.api.FunnelService;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.AuthenticatedUser;

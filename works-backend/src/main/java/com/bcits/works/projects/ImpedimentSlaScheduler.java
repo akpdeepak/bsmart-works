@@ -1,6 +1,4 @@
 package com.bcits.works.projects;
-import com.bcits.works.WorksApplication;
-import com.bcits.works.sla.SlaClockScheduler;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

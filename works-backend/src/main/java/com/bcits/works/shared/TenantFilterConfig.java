@@ -1,6 +1,5 @@
 package com.bcits.works.shared;
 
-import com.bcits.works.shared.WriteRateLimitInterceptor;
 
 
 import org.springframework.context.annotation.Configuration;

@@ -1,9 +1,4 @@
 package com.bcits.works.workitems;
-import com.bcits.works.auth.api.User;
-import com.bcits.works.projects.Assumption;
-import com.bcits.works.projects.Dependency;
-import com.bcits.works.projects.api.Project;
-import com.bcits.works.shared.api.Risk;
 
 import java.util.List;
 import java.util.Map;

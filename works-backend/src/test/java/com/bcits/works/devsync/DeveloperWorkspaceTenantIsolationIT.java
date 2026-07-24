@@ -1,8 +1,4 @@
 package com.bcits.works.devsync;
-import com.bcits.works.auth.api.User;
-import com.bcits.works.projects.api.Project;
-import com.bcits.works.shared.EventService;
-import com.bcits.works.workspaces.api.Workspace;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;

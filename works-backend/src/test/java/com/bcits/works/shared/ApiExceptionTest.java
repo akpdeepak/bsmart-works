@@ -1,5 +1,4 @@
 package com.bcits.works.shared;
-import com.bcits.works.auth.api.User;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

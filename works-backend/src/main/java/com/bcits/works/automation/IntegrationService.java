@@ -1,5 +1,4 @@
 package com.bcits.works.automation;
-import com.bcits.works.workspaces.api.Workspace;
 
 import com.bcits.works.shared.AutomationCatalog;
 import com.bcits.works.AutomationService;

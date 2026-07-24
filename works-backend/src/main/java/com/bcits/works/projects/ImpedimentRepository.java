@@ -1,5 +1,4 @@
 package com.bcits.works.projects;
-import com.bcits.works.sla.SlaClockScheduler;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;

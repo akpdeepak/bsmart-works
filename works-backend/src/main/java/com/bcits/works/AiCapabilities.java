@@ -1,8 +1,4 @@
 package com.bcits.works;
-import com.bcits.works.knowledge.api.Article;
-import com.bcits.works.projects.Release;
-import com.bcits.works.projects.api.Sprint;
-import com.bcits.works.reporting.Dashboard;
 import com.bcits.works.ai.api.AiModelTier;
 
 import java.util.List;

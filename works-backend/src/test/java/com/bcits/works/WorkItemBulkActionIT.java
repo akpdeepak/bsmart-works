@@ -1,5 +1,4 @@
 package com.bcits.works;
-import com.bcits.works.projects.api.Project;
 
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.workitems.WorkItemBulkService;

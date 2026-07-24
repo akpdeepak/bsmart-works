@@ -1,5 +1,4 @@
 package com.bcits.works.messaging.api;
-import com.bcits.works.messaging.NotificationPreference;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;

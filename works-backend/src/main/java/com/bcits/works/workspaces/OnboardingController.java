@@ -1,5 +1,4 @@
 package com.bcits.works.workspaces;
-import com.bcits.works.auth.api.User;
 
 import com.bcits.works.shared.AuthenticatedUser;
 

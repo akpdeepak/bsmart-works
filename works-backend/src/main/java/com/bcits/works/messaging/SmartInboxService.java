@@ -1,6 +1,4 @@
 package com.bcits.works.messaging;
-import com.bcits.works.knowledge.api.Article;
-import com.bcits.works.workspaces.api.Workspace;
 
 import com.bcits.works.AiCapabilities;
 import com.bcits.works.shared.AiControlPlanePort;

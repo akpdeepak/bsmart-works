@@ -7,7 +7,6 @@ import com.bcits.works.shared.RbacGate;
 import com.bcits.works.shared.AuthenticatedUser;
 
 import com.bcits.works.shared.ApiException;
-import com.bcits.works.projects.SprintVarianceService;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;

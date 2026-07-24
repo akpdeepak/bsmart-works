@@ -1,5 +1,4 @@
 package com.bcits.works;
-import com.bcits.works.projects.Dependency;
 
 import com.bcits.works.auth.RbacService;
 

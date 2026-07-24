@@ -1,6 +1,4 @@
 package com.bcits.works.automation.api;
-import com.bcits.works.messaging.Meeting;
-import com.bcits.works.workspaces.api.Workspace;
 import com.bcits.works.automation.IntegrationCatalog;
 import com.bcits.works.automation.IntegrationConnection;
 import com.bcits.works.automation.IntegrationConnectionRepository;

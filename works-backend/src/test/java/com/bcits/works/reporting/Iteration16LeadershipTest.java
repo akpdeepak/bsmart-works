@@ -1,5 +1,4 @@
 package com.bcits.works.reporting;
-import com.bcits.works.shared.api.Risk;
 import com.bcits.works.security.EvidencePackageService;
 
 import org.junit.jupiter.api.Tag;

@@ -1,6 +1,5 @@
 package com.bcits.works.workitems.api;
 import com.bcits.works.workspaces.WorkspaceSetupService;
-import com.bcits.works.workspaces.api.Workspace;
 
 import com.bcits.works.shared.EventRepository;
 import com.bcits.works.shared.EventService;

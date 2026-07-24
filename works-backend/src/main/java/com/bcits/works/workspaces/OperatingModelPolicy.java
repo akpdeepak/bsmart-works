@@ -1,5 +1,4 @@
 package com.bcits.works.workspaces;
-import com.bcits.works.auth.api.User;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

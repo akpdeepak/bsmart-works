@@ -1,5 +1,4 @@
 package com.bcits.works;
-import com.bcits.works.knowledge.api.Article;
 
 import com.bcits.works.shared.EventService;
 import com.bcits.works.messaging.CommentDigestScheduler;

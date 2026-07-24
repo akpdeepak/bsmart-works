@@ -1,6 +1,4 @@
 package com.bcits.works;
-import com.bcits.works.projects.Dependency;
-import com.bcits.works.projects.api.Project;
 
 import com.bcits.works.workspaces.TeamRoleService;
 import com.bcits.works.shared.RbacGate;

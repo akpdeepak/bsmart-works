@@ -1,6 +1,5 @@
 package com.bcits.works.automation;
 import com.bcits.works.shared.EncryptionService;
-import com.bcits.works.workspaces.api.Workspace;
 
 import com.bcits.works.shared.WorkspaceFilterActivator;
 

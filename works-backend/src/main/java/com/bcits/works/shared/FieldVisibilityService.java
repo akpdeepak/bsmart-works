@@ -1,6 +1,5 @@
 package com.bcits.works.shared;
 import com.bcits.works.workitems.FieldDefController;
-import com.bcits.works.workspaces.api.Workspace;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

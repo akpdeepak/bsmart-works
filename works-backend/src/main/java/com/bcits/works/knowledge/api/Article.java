@@ -1,5 +1,4 @@
 package com.bcits.works.knowledge.api;
-import com.bcits.works.knowledge.ArticleStalenessChecker;
 
 import com.bcits.works.shared.WorkspaceFilterActivator;
 

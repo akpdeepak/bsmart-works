@@ -1,6 +1,4 @@
 package com.bcits.works;
-import com.bcits.works.auth.api.User;
-import com.bcits.works.knowledge.api.Article;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;

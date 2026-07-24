@@ -1,5 +1,4 @@
 package com.bcits.works.security;
-import com.bcits.works.workspaces.api.Workspace;
 
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.AuditLogEntry;

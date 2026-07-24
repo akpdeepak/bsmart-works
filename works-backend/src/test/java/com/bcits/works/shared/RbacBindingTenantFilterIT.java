@@ -1,6 +1,4 @@
 package com.bcits.works.shared;
-import com.bcits.works.auth.api.User;
-import com.bcits.works.projects.ProjectService;
 
 import com.bcits.works.auth.RbacService;
 

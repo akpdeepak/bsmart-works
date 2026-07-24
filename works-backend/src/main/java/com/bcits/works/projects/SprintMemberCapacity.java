@@ -1,5 +1,4 @@
 package com.bcits.works.projects;
-import com.bcits.works.projects.api.Sprint;
 
 import com.bcits.works.shared.WorkspaceFilterActivator;
 

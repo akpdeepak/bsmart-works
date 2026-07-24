@@ -1,5 +1,4 @@
 package com.bcits.works;
-import com.bcits.works.knowledge.api.Article;
 import com.bcits.works.knowledge.ArticleDocxSerializer;
 import com.bcits.works.knowledge.ArticlePdfExporter;
 

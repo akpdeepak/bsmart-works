@@ -1,5 +1,4 @@
 package com.bcits.works.projects;
-import com.bcits.works.projects.api.Sprint;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

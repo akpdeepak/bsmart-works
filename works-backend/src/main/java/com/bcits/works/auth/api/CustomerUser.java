@@ -1,7 +1,6 @@
 package com.bcits.works.auth.api;
 import com.bcits.works.security.api.CustomerUserPiiService;
 import com.bcits.works.service.CustomerAccount;
-import com.bcits.works.shared.BlindIndexService;
 import com.bcits.works.shared.PiiVaultService;
 
 import com.bcits.works.shared.WorkspaceFilterActivator;

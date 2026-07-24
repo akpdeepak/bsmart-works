@@ -1,6 +1,4 @@
 package com.bcits.works.projects;
-import com.bcits.works.projects.api.Sprint;
-import com.bcits.works.workspaces.api.Workspace;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;

@@ -1,5 +1,4 @@
 package com.bcits.works.messaging;
-import com.bcits.works.shared.AppEvent;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

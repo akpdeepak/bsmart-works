@@ -1,5 +1,4 @@
 package com.bcits.works.workitems;
-import com.bcits.works.workitems.api.WorkItem;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

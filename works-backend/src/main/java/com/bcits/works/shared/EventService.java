@@ -1,5 +1,4 @@
 package com.bcits.works.shared;
-import com.bcits.works.workspaces.api.Workspace;
 
 import com.bcits.works.shared.api.RealtimeService;
 import com.bcits.works.WebhookService;

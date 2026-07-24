@@ -1,6 +1,4 @@
 package com.bcits.works;
-import com.bcits.works.AiCapabilities;
-import com.bcits.works.shared.api.Risk;
 import com.bcits.works.reporting.LeadershipService;
 import com.bcits.works.ai.AiAssistService;
 import com.bcits.works.ai.api.AiControlPlaneService;

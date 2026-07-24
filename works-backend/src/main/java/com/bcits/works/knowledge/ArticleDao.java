@@ -1,5 +1,4 @@
 package com.bcits.works.knowledge;
-import com.bcits.works.knowledge.api.Article;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;

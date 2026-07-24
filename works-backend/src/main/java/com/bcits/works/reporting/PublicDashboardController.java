@@ -1,5 +1,4 @@
 package com.bcits.works.reporting;
-import com.bcits.works.security.SecurityConfig;
 
 import com.bcits.works.shared.TenantScope;
 

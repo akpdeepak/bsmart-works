@@ -16,6 +16,7 @@ import com.bcits.works.workitems.WorkItemBulkService;
 import com.bcits.works.workitems.WorkItemCommandService;
 import com.bcits.works.workitems.WorkItemController;
 import com.bcits.works.workitems.WorkItemEngagementService;
+import com.bcits.works.workitems.WorkItemNotifier;
 import com.bcits.works.workitems.WorkItemReadService;
 import com.bcits.works.workitems.WorkItemRepository;
 import com.bcits.works.workitems.WorkflowRuleEngine;
@@ -87,11 +88,14 @@ class WorkItemTrashRouteTest {
     private final FieldVisibilityService fieldVisibility = mock(FieldVisibilityService.class);
     private final WorkItemReadService readService = new WorkItemReadService(
             jdbc, repository, authenticatedUser, new ObjectMapper(), fieldVisibility);
+    private final WorkItemNotifier notifier = new WorkItemNotifier(
+            emailService, batchService, userRepository, watcherService, rbac);
     private final WorkItemCommandService commandService = new WorkItemCommandService(
-            repository, eventService, jdbc, userRepository, emailService, batchService,
+            repository, eventService, jdbc,
             authenticatedUser, rbac, dodChecklists, extensions, workflowRules, statusConfig,
-            wipLimits, watcherService, mock(AutomationService.class), mock(FunnelService.class),
-            readService, new ObjectMapper(), org.mockito.Mockito.mock(com.bcits.works.workitems.TeamSequenceGenerator.class));
+            wipLimits, mock(AutomationService.class), mock(FunnelService.class),
+            readService, new ObjectMapper(),
+            org.mockito.Mockito.mock(com.bcits.works.workitems.TeamSequenceGenerator.class), notifier);
 
     private final WorkItemController controller = new WorkItemController(
             authenticatedUser, mock(WorkItemBulkService.class), readService, commandService,

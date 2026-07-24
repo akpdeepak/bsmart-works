@@ -5,12 +5,8 @@ import com.bcits.works.AutomationService;
 import com.bcits.works.BoardWipLimitService;
 import com.bcits.works.ConcurrencyGuard;
 import com.bcits.works.DefaultWorkItemTypes;
-import com.bcits.works.EmailService;
 import com.bcits.works.ExtensionExecutionService;
 import com.bcits.works.FunnelService;
-import com.bcits.works.messaging.NotificationBatchService;
-import com.bcits.works.messaging.WatcherService;
-import com.bcits.works.auth.UserRepository;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.EventService;
@@ -37,9 +33,6 @@ public class WorkItemCommandService {
     private final WorkItemRepository repository;
     private final EventService eventService;
     private final JdbcTemplate jdbc;
-    private final UserRepository userRepository;
-    private final EmailService emailService;
-    private final NotificationBatchService batchService;
     private final AuthenticatedUser authenticatedUser;
     private final RbacGate rbac;
     private final DodChecklistService dodChecklists;
@@ -47,29 +40,25 @@ public class WorkItemCommandService {
     private final WorkflowRuleEngine workflowRules;
     private final StatusConfigService statusConfig;
     private final BoardWipLimitService wipLimits;
-    private final WatcherService watcherService;
     private final AutomationService automations;
     private final FunnelService funnelService;
     private final WorkItemReadService readService;
     private final ObjectMapper objectMapper;
     private final TeamSequenceGenerator teamSequenceGenerator;
+    private final WorkItemNotifier notifier;
 
     public WorkItemCommandService(WorkItemRepository repository, EventService eventService,
-                                  JdbcTemplate jdbc, UserRepository userRepository,
-                                  EmailService emailService, NotificationBatchService batchService,
+                                  JdbcTemplate jdbc,
                                   AuthenticatedUser authenticatedUser, RbacGate rbac,
                                   DodChecklistService dodChecklists, ExtensionExecutionService extensions,
                                   WorkflowRuleEngine workflowRules, StatusConfigService statusConfig,
-                                  BoardWipLimitService wipLimits, WatcherService watcherService,
+                                  BoardWipLimitService wipLimits,
                                   AutomationService automations, FunnelService funnelService,
                                   WorkItemReadService readService, ObjectMapper objectMapper,
-                                  TeamSequenceGenerator teamSequenceGenerator) {
+                                  TeamSequenceGenerator teamSequenceGenerator, WorkItemNotifier notifier) {
         this.repository = repository;
         this.eventService = eventService;
         this.jdbc = jdbc;
-        this.userRepository = userRepository;
-        this.emailService = emailService;
-        this.batchService = batchService;
         this.authenticatedUser = authenticatedUser;
         this.rbac = rbac;
         this.dodChecklists = dodChecklists;
@@ -77,12 +66,12 @@ public class WorkItemCommandService {
         this.workflowRules = workflowRules;
         this.statusConfig = statusConfig;
         this.wipLimits = wipLimits;
-        this.watcherService = watcherService;
         this.automations = automations;
         this.funnelService = funnelService;
         this.readService = readService;
         this.objectMapper = objectMapper;
         this.teamSequenceGenerator = teamSequenceGenerator;
+        this.notifier = notifier;
     }
 
     public WorkItem restoreFromTrash(String id) {
@@ -180,7 +169,7 @@ public class WorkItemCommandService {
             funnelService.onMeaningfulAction(wsId, userId);
             evaluateAutomation(wsId, AutomationCatalog.TR_ITEM_CREATED, saved, userId, "create");
         }
-        notifyAssigneeOnCreate(saved, userId);
+        notifier.notifyAssigneeOnCreate(saved, userId);
         readService.attachTags(saved);
         return saved;
     }
@@ -333,8 +322,8 @@ public class WorkItemCommandService {
         }
         recordFieldDiffs(id, saved, updatedItem, userId, oldAssignee, oldPriority, oldTitle,
             oldDueDate, oldType, oldStoryPoints, oldDescription, oldTags);
-        notifyAssigneeOnUpdate(saved, oldAssignee, userId);
-        notifyWatchers(id, saved, updatedItem, userId, oldStatus, oldAssignee, oldPriority, oldTitle,
+        notifier.notifyAssigneeOnUpdate(saved, oldAssignee, userId);
+        notifier.notifyWatchers(id, saved, updatedItem, userId, oldStatus, oldAssignee, oldPriority, oldTitle,
             oldDueDate, oldStoryPoints, oldDescription, oldTags);
         evaluateUpdateAutomations(wsId, saved, userId, oldStatus, oldAssignee);
     }
@@ -381,54 +370,8 @@ public class WorkItemCommandService {
         }
     }
 
-    private void notifyAssigneeOnCreate(WorkItem saved, String userId) {
-        if (saved.getAssigneeId() != null && !saved.getAssigneeId().equals(userId)) {
-            createNotification(rbac.workspaceForProject(saved.getProjectId()), saved.getAssigneeId(), "ASSIGNED",
-                "You were assigned to: " + saved.getTitle(), "/items/" + saved.getId());
-            String actorName = actorName(userId);
-            emailService.sendAssignmentEmail(saved.getAssigneeId(), actorName, saved.getId(), saved.getTitle());
-        }
-    }
-
-    private void notifyAssigneeOnUpdate(WorkItem saved, String oldAssignee, String userId) {
-        String newAssignee = saved.getAssigneeId();
-        if (newAssignee != null && !newAssignee.equals(oldAssignee) && !newAssignee.equals(userId)) {
-            createNotification(rbac.workspaceForProject(saved.getProjectId()), newAssignee, "ASSIGNED",
-                "You were assigned to: " + saved.getTitle(), "/items/" + saved.getId());
-            emailService.sendAssignmentEmail(newAssignee, actorName(userId), saved.getId(), saved.getTitle());
-        }
-    }
-
-    private void notifyWatchers(String id, WorkItem saved, WorkItem updatedItem, String userId, String oldStatus,
-                                String oldAssignee, String oldPriority, String oldTitle,
-                                java.time.LocalDate oldDueDate, Integer oldStoryPoints,
-                                String oldDescription, List<String> oldTags) {
-        java.util.Set<String> notified = new java.util.HashSet<>();
-        if (userId != null) {
-            notified.add(userId);
-        }
-        String newAssignee = saved.getAssigneeId();
-        if (newAssignee != null && !newAssignee.equals(oldAssignee)) {
-            watcherService.watch(id, newAssignee);
-            notified.add(newAssignee);
-        }
-        boolean changed = !java.util.Objects.equals(oldStatus, saved.getStatus())
-            || !java.util.Objects.equals(oldAssignee, saved.getAssigneeId())
-            || !java.util.Objects.equals(oldPriority, saved.getPriority())
-            || !java.util.Objects.equals(oldTitle, saved.getTitle())
-            || !java.util.Objects.equals(oldDueDate, saved.getDueDate())
-            || !java.util.Objects.equals(oldStoryPoints, saved.getStoryPoints())
-            || !java.util.Objects.equals(oldDescription, saved.getDescription())
-            || (updatedItem.getTags() != null && !oldTags.equals(updatedItem.getTags().stream().sorted().toList()));
-        if (changed) {
-            String ref = saved.getAutoId() != null ? saved.getAutoId() : saved.getId();
-            // Name-free message + actor id (RB-40 §3 Slice 4c): the actor's display name is resolved at
-            // render via the vault, so the stored notification carries no raw PII.
-            watcherService.notifyWatchers(rbac.workspaceForProject(saved.getProjectId()), id, userId,
-                "updated " + ref + " - " + saved.getTitle(),
-                notified);
-        }
-    }
+    // Assignee + watcher notifications moved to WorkItemNotifier (RB-10 §2); the command service
+    // calls notifier.notifyAssigneeOnCreate / notifyAssigneeOnUpdate / notifyWatchers after persisting.
 
     private void evaluateUpdateAutomations(String wsId, WorkItem saved, String userId,
                                            String oldStatus, String oldAssignee) {
@@ -580,11 +523,4 @@ public class WorkItemCommandService {
         }
     }
 
-    private void createNotification(String workspaceId, String userId, String type, String message, String link) {
-        batchService.createIfNotBatched(workspaceId, userId, type, message, link);
-    }
-
-    private String actorName(String userId) {
-        return userRepository.findById(userId != null ? userId : "").map(u -> u.getFullName()).orElse("Someone");
-    }
 }

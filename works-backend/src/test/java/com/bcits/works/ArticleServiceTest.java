@@ -11,6 +11,7 @@ import com.bcits.works.knowledge.ArticleApprovalRepository;
 import com.bcits.works.knowledge.ArticleCommentRepository;
 import com.bcits.works.knowledge.ArticleDao;
 import com.bcits.works.knowledge.ArticleDiffService;
+import com.bcits.works.knowledge.ArticleQueryService;
 import com.bcits.works.knowledge.ArticleRepository;
 import com.bcits.works.knowledge.ArticleService;
 import com.bcits.works.knowledge.ArticleVersion;
@@ -68,11 +69,17 @@ class ArticleServiceTest {
     private final WebhookService webhookService = mock(WebhookService.class);
     private final SpaceFollowerService spaceFollowerService = mock(SpaceFollowerService.class);
 
-    private final ArticleService service = new ArticleService(
+    // The read side and the by-id tenant/RBAC choke points now live in ArticleQueryService; the
+    // command service delegates its loads there, so the test wires a real one over the same mocks.
+    private final ArticleQueryService queryService = new ArticleQueryService(
             articleRepository, articleVersionRepository, articleCommentRepository,
+            knowledgeSpaceRepository, analyticsService, diffService, articleDao, eventService, rbac);
+
+    private final ArticleService service = new ArticleService(
+            articleRepository, articleVersionRepository,
             knowledgeSpaceRepository, approvalRepository, workflowService,
-            analyticsService, diffService, articleDao, eventService, rbac,
-            webhookService, spaceFollowerService);
+            articleDao, eventService, rbac,
+            webhookService, spaceFollowerService, queryService);
 
     @BeforeEach
     void setUp() {

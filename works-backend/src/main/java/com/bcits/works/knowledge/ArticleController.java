@@ -30,10 +30,13 @@ import jakarta.validation.Valid;
 public class ArticleController {
 
     private final ArticleService articleService;
+    private final ArticleQueryService articleQueryService;
     private final AuthenticatedUser authenticatedUser;
 
-    public ArticleController(ArticleService articleService, AuthenticatedUser authenticatedUser) {
+    public ArticleController(ArticleService articleService, ArticleQueryService articleQueryService,
+                             AuthenticatedUser authenticatedUser) {
         this.articleService = articleService;
+        this.articleQueryService = articleQueryService;
         this.authenticatedUser = authenticatedUser;
     }
 
@@ -43,39 +46,39 @@ public class ArticleController {
                                       @RequestParam(required = false) String search,
                                       @RequestParam(defaultValue = "0") int page,
                                       @RequestParam(defaultValue = "50") int size) {
-        return articleService.list(spaceId, query, search, page, size, authenticatedUser.id());
+        return articleQueryService.list(spaceId, query, search, page, size, authenticatedUser.id());
     }
 
     // Top search terms typed into the KB — completes iteration-5 article analytics
     // (per-article views/votes/citations/stale live on /{id}/analytics; this is workspace-wide).
     @GetMapping("/analytics/search-terms")
     public List<Map<String, Object>> topSearchTerms(@RequestParam(defaultValue = "20") int limit) {
-        return articleService.topSearchTerms(limit);
+        return articleQueryService.topSearchTerms(limit);
     }
 
     @GetMapping("/{id}")
     public Article getArticle(@PathVariable String id) {
-        return articleService.getForRead(id, authenticatedUser.id());
+        return articleQueryService.getForRead(id, authenticatedUser.id());
     }
 
     /** Returns direct children of an article, for hierarchical navigation. */
     @GetMapping("/{id}/children")
     public List<Article> getChildren(@PathVariable String id) {
-        return articleService.getChildren(id, authenticatedUser.id());
+        return articleQueryService.getChildren(id, authenticatedUser.id());
     }
 
     @GetMapping("/{id}/versions")
     public List<ArticleVersion> getVersions(@PathVariable String id,
                                             @RequestParam(defaultValue = "0") int page,
                                             @RequestParam(defaultValue = "50") int size) {
-        return articleService.getVersions(id, page, size, authenticatedUser.id());
+        return articleQueryService.getVersions(id, page, size, authenticatedUser.id());
     }
 
     // Line-level diff between two stored versions, for the version "diff view".
     @GetMapping("/{id}/versions/{from}/diff/{to}")
     public Map<String, Object> diffVersions(@PathVariable String id,
                                             @PathVariable Integer from, @PathVariable Integer to) {
-        return articleService.diffVersions(id, from, to, authenticatedUser.id());
+        return articleQueryService.diffVersions(id, from, to, authenticatedUser.id());
     }
 
     // Restore a prior version: copies its title/content onto the article as a new
@@ -87,17 +90,17 @@ public class ArticleController {
 
     @GetMapping("/{id}/links")
     public List<Map<String, Object>> getArticleLinks(@PathVariable String id) {
-        return articleService.getArticleLinks(id, authenticatedUser.id());
+        return articleQueryService.getArticleLinks(id, authenticatedUser.id());
     }
 
     @GetMapping("/{id}/analytics")
     public Map<String, Object> getAnalytics(@PathVariable String id) {
-        return articleService.getAnalytics(id, authenticatedUser.id());
+        return articleQueryService.getAnalytics(id, authenticatedUser.id());
     }
 
     @GetMapping("/{id}/activity")
     public List<AppEvent> getActivity(@PathVariable String id) {
-        return articleService.getActivity(id, authenticatedUser.id());
+        return articleQueryService.getActivity(id, authenticatedUser.id());
     }
 
     @PostMapping

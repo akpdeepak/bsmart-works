@@ -61,4 +61,22 @@ describe('frontend app architecture', () => {
     expect(readSource('app/providers/AppProviders.jsx')).toContain('QueryClientProvider');
     expect(readSource('app/shortcuts/useGlobalShortcuts.js')).toContain('document.addEventListener');
   });
+
+  it('keeps RouteOutlet lintable — no blanket eslint-disable', () => {
+    // W2-c gap (GH-537). RouteOutlet carried a file-level `eslint-disable` over 927 lines, which
+    // suppressed no-undef everywhere in it. Behind it, `userPrefs` was handed to <AccountView> but
+    // never destructured from `model` — so opening the account route threw a ReferenceError. The
+    // blanket disable is what let a crashing route ship, so it must not come back.
+    const source = readSource('app/routes/RouteOutlet.jsx');
+
+    expect(source).not.toMatch(/^\/\* eslint-disable \*\/$/m);
+    expect(source).toContain('userPrefs');
+    expect(source).toContain('saveUserPrefs');
+  });
+
+  it('has no dead lazy-views module', () => {
+    // app/lazy-views.js was 38 lines with zero references (W2-c gap, GH-537). RouteOutlet does its
+    // own lazy importing, so the module was superseded and deleted.
+    expect(() => readSource('app/lazy-views.js')).toThrow();
+  });
 });

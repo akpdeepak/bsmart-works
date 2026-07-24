@@ -13,6 +13,12 @@
 
 ## 0. TL;DR — read this first
 
+> **Phase 2 closed, 2026-07-24.** All six W2 rows meet their DoD on `main` @ `c303dfcb`; §1 records
+> the measurements and the PRs. The nine sign-off decisions of §9 are all closed — the last two, the
+> `api`/`internal` split and `CustomerUser` ownership, were settled in #541 and #542 respectively.
+> Everything below this line is the plan as it stood while the work was in flight, retained for the
+> reasoning it captures.
+>
 > **Status refresh, 2026-07-21.** This plan was authored 2026-06-20 and sat unmerged while the work
 > it describes was executed. Phase 1 closed **2026-06-21** (PRs #415–#441) and the first Phase 2
 > tranche merged **2026-07-19** (PRs #446–#452, #454–#478). The original §0 dependency argument and
@@ -43,18 +49,20 @@
 
 ## 1. Scope (the W2 ledger rows, mapped to EPICs)
 
-Measured on `main` at `08d4cb6c`, **2026-07-23** (Phase 0 truth pass; previously `ef031e0e`,
-2026-07-21). "Was" is the 2026-06-20 baseline this plan was written against. The master ledger's §5
-now agrees with this table — until 2026-07-23 it claimed W2 was ✅ Verified while this plan said the
-opposite, and this plan was the accurate one.
+**Phase 2 is complete. All six W2 rows meet their Definition of Done**, measured on `main` at
+`c303dfcb`, **2026-07-24** (previously `08d4cb6c`, 2026-07-23). "Was" is the 2026-06-20 baseline this
+plan was written against. Closed by PRs #529–#536 (god classes, early carve batches) and #538–#542
+(kernel carve, AsyncBoundary, AppShell feature state, the api/internal boundary, flat-root drain),
+tracked on GH-537. Residual flat-root debt — 20 cycle- or kernel-bound classes — is tracked
+separately in GH-543 and is not a W2 exit criterion.
 
 | # | W2 item (roadmap §5) | Was (06-20) | Measured now | Remaining | Owning EPIC plan |
 |---|----------------------|-------------|--------------|-----------|------------------|
-| W2-a | Split flat `com.bcits.works` into domain modules with ArchUnit boundaries | 0 classes moved | **DONE for relocation** — 14 modules populated, flat root 291→72 | **API-first goal not met:** no `api`/`internal` split anywhere, no module→module ArchUnit rule (`auth.UserRepository` imported 14× cross-module, `workitems.WorkItemRepository` 10×); the 72 flat-root files match no slice so the cycle gate skips them | [EPIC-03 full](epics/EPIC-03-backend-modularization-phase2.md) |
-| W2-b | God classes within budget | `KpiService` 716, `BqlCompiler` 650, `ArticleController` 630, `WorkItemCommandService` 559 | `BqlCompiler` **56** (genuinely split → Parser 255 / Emitter 355 / Lexer 106); `ArticleController` 297 **but `ArticleService` 730**; `KpiService` **612**; `WorkItemCommandService` **590** | 1 of 4 decomposed. `ArticleService` is now the largest backend file in the repo — relocated, not split. `KpiService` −104, `WorkItemCommandService` −1 | [EPIC-03 full](epics/EPIC-03-backend-modularization-phase2.md) |
-| W2-c | Decompose `AppShell.jsx` into router + providers + overlays + feature state | 4,606 lines, ~180 `useState` | **2,933 lines, 199 `useState`** | Gate re-pinned to `≤2933` (PR #526), zero slack — it blocks regrowth but is not decomposition. `RouteOutlet.jsx` is 927 lines, opens with a file-level `eslint-disable`, and destructures ~600 props from one object. `app/lazy-views.js` is dead code (0 references) | [EPIC-04 full](epics/EPIC-04-frontend-architecture-phase2.md) |
+| W2-a | Split flat `com.bcits.works` into domain modules with ArchUnit boundaries | 0 classes moved | **DONE** — 14 modules populated, flat root 291→**20**, **71 classes published** to `<module>.api` | **DONE** — the API-first goal is met: every module publishes `<module>.api` and `ArchitectureTest.crossModuleAccessGoesThroughApi` fails the build on any cross-module access outside it. `shared` is exempt as the kernel; the flat root is excluded as a non-module. 20 classes remain at the root, each cycle- or kernel-bound → GH-543 | [EPIC-03 full](epics/EPIC-03-backend-modularization-phase2.md) |
+| W2-b | God classes within budget | `KpiService` 716, `BqlCompiler` 650, `ArticleController` 630, `WorkItemCommandService` 559 | `ArticleService` **358**, `KpiService` **428**, `BqlCompiler` **56**, `WorkItemCommandService` **526** | **DONE** — all four within budget (PRs #529–#533) | [EPIC-03 full](epics/EPIC-03-backend-modularization-phase2.md) |
+| W2-c | Decompose `AppShell.jsx` into router + providers + overlays + feature state | 4,606 lines, ~180 `useState` | **2,360 lines, 129 `useState`** | **DONE** — five feature-state hooks extracted (`useDashboardsState`, `useReportsState`, `useCustomFieldsState`, `useScrumMasterCockpitState`, `useProductOwnerState`); line **and** `useState` ratchets both enforced. `RouteOutlet.jsx` no longer carries a file-level `eslint-disable` — removing it exposed a `no-undef` that crashed the account route, now fixed and regression-tested. Dead `app/lazy-views.js` deleted | [EPIC-04 full](epics/EPIC-04-frontend-architecture-phase2.md) |
 | W2-d | FE monoliths code-split, lazy | eager | `locales.js` **4,426→49** + 10 per-language files — **DONE**. `BlockEditor.jsx` **2,176 (unchanged)** and `knowledge-view.jsx` **1,828→1,783** were made lazy, not decomposed | **DONE** — the initial-payload budget landed in PR #511 (`scripts/check-bundle-budget.mjs`, registered in `verification-manifest.json` full/release and in `ci.yml`); GH-509 closed 2026-07-23. Decision EPIC-04 §7.c is settled | [EPIC-04 full](epics/EPIC-04-frontend-architecture-phase2.md) |
-| W2-e | Adopt `AsyncBoundary`; retire hand-rolled async states | 0 production imports | **17 of 36 views** | 22 views. DoD is "all primary async surfaces" | [EPIC-04 full](epics/EPIC-04-frontend-architecture-phase2.md) |
+| W2-e | Adopt `AsyncBoundary`; retire hand-rolled async states | 0 production imports | **every async view (30 of 36; 6 have no async load)** | **DONE** — enforced by `async-boundary-adoption.test.js`, which fails both on an unconverted async view and on a stale exemption. The earlier "17 of 36" was a `grep -rl` overcount (it matched the component, its test, and a non-view organism); the true starting figure was 14 | [EPIC-04 full](epics/EPIC-04-frontend-architecture-phase2.md) |
 | W2-f | Token debt: hex literals + legacy `warn` block | 3 hex; 43-file legacy block | **0 raw hex** in views and components; CI-blocking via `guardrails.sh` | **DONE** | [EPIC-04 full](epics/EPIC-04-frontend-architecture-phase2.md) |
 
 > Phase 2 ≈ taking **EPIC 3 (backend modularization)** and **EPIC 4 (frontend architecture)** from

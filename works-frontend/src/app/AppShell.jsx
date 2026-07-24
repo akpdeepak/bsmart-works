@@ -169,7 +169,7 @@ export default function AppShell() {
 
   // Notification prefs
   const [notifPrefs, setNotifPrefs]     = useState({ notifyAssign: true, notifyComment: true, notifyMention: true, emailDigest: false });
-  const [, setUserPrefs]       = useState({ theme: 'system', notificationsEnabled: true, locale: 'en', timezone: 'UTC' });
+  const [userPrefs, setUserPrefs] = useState({ theme: 'system', notificationsEnabled: true, locale: 'en', timezone: 'UTC' });
 
   // Iteration 2 — Sprints & Backlog
   const [sprints, setSprints]           = useState([]);
@@ -2028,7 +2028,7 @@ export default function AppShell() {
               stakeholders, standupDraft, standups, startCeremony, startStandup, statusResolver, stopShare, submitArticleForReview, supportDash,
               submitMyStandup, swimlaneBy, teams, testRule, todayLayout, toggleArticleComment, togglePermission, toggleReportSchedule,
               toggleStar, toggleViolationSelect, totalWorkItemCount, transitionServiceRequest, trashItems, unreadCount, updateArticle, updateDashboardWidgetConfig,
-              updateImpediment, updateKrProgress, updateRelease, updateReportSection, updateThemeStatus, userName, userRole, users,
+              updateImpediment, updateKrProgress, updateRelease, updateReportSection, updateThemeStatus, userName, userPrefs, userRole, users,
               varianceResult, varianceSprintId, velocityData, view, violationFilter, voteIdea, voteRetroNote, widgetMetrics,
               wipLimits, workflowDetail, workflows, workItems, workItemTypes, workspaceMembers,
             }}

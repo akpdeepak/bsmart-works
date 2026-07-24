@@ -1,6 +1,5 @@
 package com.bcits.works.service;
 
-import com.bcits.works.CustomerFeedback;
 import com.bcits.works.security.CustomerAttributionPiiService;
 import com.bcits.works.shared.AuthenticatedUser;
 

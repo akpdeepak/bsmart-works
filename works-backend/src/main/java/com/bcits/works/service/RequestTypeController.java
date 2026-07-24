@@ -1,4 +1,4 @@
-package com.bcits.works;
+package com.bcits.works.service;
 import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;

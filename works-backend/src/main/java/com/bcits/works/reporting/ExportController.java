@@ -1,11 +1,7 @@
-package com.bcits.works;
+package com.bcits.works.reporting;
 import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;
-import com.bcits.works.reporting.Dashboard;
-import com.bcits.works.reporting.DashboardRepository;
-import com.bcits.works.reporting.Report;
-import com.bcits.works.reporting.ReportRepository;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;

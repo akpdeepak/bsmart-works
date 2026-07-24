@@ -1,5 +1,5 @@
-package com.bcits.works;
-import com.bcits.works.reporting.AggregationService;
+package com.bcits.works.reporting;
+
 
 import com.bcits.works.workspaces.Team;
 import com.bcits.works.workspaces.TeamRepository;

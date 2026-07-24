@@ -14,6 +14,7 @@ import com.bcits.works.knowledge.ArticleCommentRepository;
 import com.bcits.works.knowledge.ArticleController;
 import com.bcits.works.knowledge.ArticleDao;
 import com.bcits.works.knowledge.ArticleDiffService;
+import com.bcits.works.knowledge.ArticleQueryService;
 import com.bcits.works.knowledge.ArticleRepository;
 import com.bcits.works.knowledge.ArticleService;
 import com.bcits.works.knowledge.ArticleVersionRepository;
@@ -74,14 +75,20 @@ class KnowledgeTenantIsolationTest {
     private final SpaceFollowerService spaceFollowerService = mock(SpaceFollowerService.class);
     private final WebhookService webhookService = mock(WebhookService.class);
 
-    // A real ArticleService (built from the mocks) so the controller's delegation actually runs the
-    // tenant/RBAC isolation logic that now lives in the service (RB-10 §2, RB-40 §1).
-    private final ArticleService articleService = new ArticleService(
+    // Real ArticleQueryService + ArticleService (built from the mocks) so the controller's
+    // delegation actually runs the tenant/RBAC isolation logic. The read side and the by-id choke
+    // point now live in ArticleQueryService; the command service delegates its loads there
+    // (RB-10 §2, RB-40 §1).
+    private final ArticleQueryService articleQueryService = new ArticleQueryService(
         articleRepository, articleVersionRepository, articleCommentRepository,
+        spaceRepository, analyticsService, diffService, articleDao, eventService, rbac);
+    private final ArticleService articleService = new ArticleService(
+        articleRepository, articleVersionRepository,
         spaceRepository, approvalRepository, workflowService,
-        analyticsService, diffService, articleDao, eventService, rbac,
-        webhookService, spaceFollowerService);
-    private final ArticleController articles = new ArticleController(articleService, authenticatedUser);
+        articleDao, eventService, rbac,
+        webhookService, spaceFollowerService, articleQueryService);
+    private final ArticleController articles = new ArticleController(
+        articleService, articleQueryService, authenticatedUser);
     private final KnowledgeSpaceController spaces = new KnowledgeSpaceController(
         spaceRepository, articleRepository, eventService, authenticatedUser, rbac);
 

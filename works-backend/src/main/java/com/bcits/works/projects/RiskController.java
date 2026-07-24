@@ -1,6 +1,6 @@
 package com.bcits.works.projects;
 
-import com.bcits.works.Risk;
+import com.bcits.works.shared.api.Risk;
 import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;

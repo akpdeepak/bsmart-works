@@ -1,6 +1,6 @@
 package com.bcits.works.messaging;
 
-import com.bcits.works.RealtimeService;
+import com.bcits.works.shared.api.RealtimeService;
 
 import org.springframework.stereotype.Service;
 

@@ -1,4 +1,5 @@
 package com.bcits.works.sla.api;
+import com.bcits.works.service.CustomerAccount;
 
 import com.bcits.works.shared.WorkspaceFilterActivator;
 

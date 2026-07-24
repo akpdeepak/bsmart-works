@@ -1,6 +1,6 @@
 package com.bcits.works.messaging;
 
-import com.bcits.works.Decision;
+import com.bcits.works.shared.api.Decision;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.RbacGate;

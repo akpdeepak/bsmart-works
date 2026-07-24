@@ -2,7 +2,7 @@ package com.bcits.works.projects;
 
 import com.bcits.works.messaging.api.ActionItem;
 import com.bcits.works.messaging.api.ActionItemRepository;
-import com.bcits.works.Risk;
+import com.bcits.works.shared.api.Risk;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.RbacGate;

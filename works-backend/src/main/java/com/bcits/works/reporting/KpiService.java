@@ -2,7 +2,7 @@ package com.bcits.works.reporting;
 
 import com.bcits.works.AiCapabilities;
 import com.bcits.works.ai.api.AiControlPlaneService;
-import com.bcits.works.BqlQueryExecutor;
+import com.bcits.works.reporting.api.BqlQueryExecutor;
 import com.bcits.works.projects.api.Project;
 import com.bcits.works.projects.api.ProjectRepository;
 import com.bcits.works.shared.ApiException;

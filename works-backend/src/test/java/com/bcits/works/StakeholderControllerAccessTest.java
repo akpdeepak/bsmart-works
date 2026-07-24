@@ -1,4 +1,6 @@
 package com.bcits.works;
+import com.bcits.works.auth.api.Stakeholder;
+import com.bcits.works.auth.api.StakeholderRepository;
 
 import com.bcits.works.auth.RbacService;
 

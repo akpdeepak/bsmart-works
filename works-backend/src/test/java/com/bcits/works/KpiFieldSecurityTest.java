@@ -1,4 +1,6 @@
 package com.bcits.works;
+import com.bcits.works.reporting.api.BqlQueryExecutor;
+import com.bcits.works.shared.BqlFieldRegistry;
 
 import com.bcits.works.workspaces.api.TeamRepository;
 

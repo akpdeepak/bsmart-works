@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.reporting.api.BqlQueryExecutor;
 
 import com.bcits.works.shared.AutomationCatalog;
 import com.bcits.works.shared.BqlException;

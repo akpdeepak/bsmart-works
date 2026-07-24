@@ -1,4 +1,5 @@
 package com.bcits.works.auth;
+import com.bcits.works.security.SecurityConfig;
 import com.bcits.works.auth.api.JwtUtil;
 import com.bcits.works.auth.api.User;
 import com.bcits.works.auth.api.UserRepository;

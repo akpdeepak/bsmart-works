@@ -1,6 +1,5 @@
 package com.bcits.works.workitems;
 
-import com.bcits.works.DefaultWorkItemTypes;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.RbacGate;

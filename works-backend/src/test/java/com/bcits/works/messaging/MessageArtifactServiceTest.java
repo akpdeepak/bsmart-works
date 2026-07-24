@@ -2,7 +2,7 @@ package com.bcits.works.messaging;
 import com.bcits.works.messaging.api.ActionItem;
 import com.bcits.works.messaging.api.ActionItemRepository;
 
-import com.bcits.works.Decision;
+import com.bcits.works.shared.api.Decision;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

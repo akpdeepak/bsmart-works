@@ -1,4 +1,5 @@
 package com.bcits.works.auth;
+import com.bcits.works.shared.TenantScope;
 
 import com.bcits.works.shared.CurrentWorkspace;
 import com.bcits.works.shared.TenantFilterSettings;

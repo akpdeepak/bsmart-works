@@ -2,7 +2,7 @@ package com.bcits.works.projects;
 import com.bcits.works.projects.api.ProjectTeamMember;
 import com.bcits.works.projects.api.ProjectTeamMemberRepository;
 
-import com.bcits.works.EmailService;
+import com.bcits.works.auth.api.EmailService;
 import com.bcits.works.ImpedimentService;
 import com.bcits.works.messaging.api.Notification;
 import com.bcits.works.messaging.api.NotificationRepository;

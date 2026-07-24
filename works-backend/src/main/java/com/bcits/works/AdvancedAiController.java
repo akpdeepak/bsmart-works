@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.ai.AiAssistController;
 import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;

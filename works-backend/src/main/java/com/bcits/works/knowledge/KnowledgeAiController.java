@@ -1,4 +1,5 @@
 package com.bcits.works.knowledge;
+import com.bcits.works.ai.api.AiControlPlaneService;
 
 import com.bcits.works.KnowledgeAiService;
 import com.bcits.works.shared.ApiException;

@@ -1,4 +1,6 @@
 package com.bcits.works.reporting;
+import com.bcits.works.shared.BqlCompiler;
+import com.bcits.works.shared.BqlFieldRegistry;
 
 import java.util.List;
 

@@ -1,4 +1,6 @@
 package com.bcits.works;
+import com.bcits.works.auth.api.EmailService;
+import com.bcits.works.workitems.api.FunnelService;
 
 import com.bcits.works.auth.RbacService;
 import com.bcits.works.auth.api.UserRepository;

@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.workitems.api.FunnelService;
 
 import com.bcits.works.workspaces.WorkspaceSetupService;
 

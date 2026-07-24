@@ -8,7 +8,7 @@ import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.EventService;
 import com.bcits.works.ai.api.AiControlPlaneService;
-import com.bcits.works.automation.WebhookDelivery;
+import com.bcits.works.automation.api.WebhookDelivery;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;

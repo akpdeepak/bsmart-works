@@ -1,6 +1,6 @@
 package com.bcits.works.workspaces;
 
-import com.bcits.works.FunnelService;
+import com.bcits.works.workitems.api.FunnelService;
 import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.ApiException;

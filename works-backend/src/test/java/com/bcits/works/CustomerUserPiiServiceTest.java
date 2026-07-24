@@ -1,4 +1,6 @@
 package com.bcits.works;
+import com.bcits.works.auth.api.CustomerUser;
+import com.bcits.works.auth.api.CustomerUserRepository;
 
 import com.bcits.works.shared.BlindIndexService;
 import com.bcits.works.security.api.CustomerUserPiiService;

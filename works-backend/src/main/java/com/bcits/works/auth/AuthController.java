@@ -5,7 +5,7 @@ import com.bcits.works.auth.api.User;
 import com.bcits.works.auth.api.UserPiiService;
 import com.bcits.works.auth.api.UserRepository;
 
-import com.bcits.works.EmailService;
+import com.bcits.works.auth.api.EmailService;
 
 import com.bcits.works.shared.ApiException;
 

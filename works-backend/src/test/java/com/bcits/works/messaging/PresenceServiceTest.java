@@ -1,6 +1,6 @@
 package com.bcits.works.messaging;
 
-import com.bcits.works.RealtimeService;
+import com.bcits.works.shared.api.RealtimeService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

@@ -1,6 +1,6 @@
 package com.bcits.works.shared;
 
-import com.bcits.works.RealtimeService;
+import com.bcits.works.shared.api.RealtimeService;
 import com.bcits.works.WebhookService;
 
 import com.fasterxml.jackson.databind.ObjectMapper;

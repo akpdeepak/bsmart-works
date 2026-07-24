@@ -1,4 +1,5 @@
 package com.bcits.works.security;
+import com.bcits.works.shared.BqlCompiler;
 
 import com.bcits.works.shared.WorkspaceFilterActivator;
 

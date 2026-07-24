@@ -1,6 +1,6 @@
 package com.bcits.works.projects;
 
-import com.bcits.works.Risk;
+import com.bcits.works.shared.api.Risk;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

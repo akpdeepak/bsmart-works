@@ -1,4 +1,5 @@
 package com.bcits.works.projects.api;
+import com.bcits.works.workspaces.TeamRoleService;
 
 import com.bcits.works.shared.WorkspaceFilterActivator;
 

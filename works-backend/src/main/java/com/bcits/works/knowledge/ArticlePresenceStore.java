@@ -1,6 +1,6 @@
 package com.bcits.works.knowledge;
 
-import com.bcits.works.RealtimeService;
+import com.bcits.works.shared.api.RealtimeService;
 
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;

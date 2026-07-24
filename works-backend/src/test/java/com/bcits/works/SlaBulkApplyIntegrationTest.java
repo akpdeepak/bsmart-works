@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.sla.SlaInstance;
 import com.bcits.works.sla.SlaEvaluationService;
 import com.bcits.works.sla.SlaInstanceRepository;
 import com.bcits.works.sla.SlaPolicy;

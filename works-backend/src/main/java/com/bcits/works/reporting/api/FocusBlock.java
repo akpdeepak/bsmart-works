@@ -1,4 +1,5 @@
 package com.bcits.works.reporting.api;
+import com.bcits.works.FocusModeService;
 
 import com.bcits.works.shared.WorkspaceFilterActivator;
 

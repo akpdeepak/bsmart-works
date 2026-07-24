@@ -31,12 +31,14 @@ public class ArticleController {
 
     private final ArticleService articleService;
     private final ArticleQueryService articleQueryService;
+    private final ArticleBulkService articleBulkService;
     private final AuthenticatedUser authenticatedUser;
 
     public ArticleController(ArticleService articleService, ArticleQueryService articleQueryService,
-                             AuthenticatedUser authenticatedUser) {
+                             ArticleBulkService articleBulkService, AuthenticatedUser authenticatedUser) {
         this.articleService = articleService;
         this.articleQueryService = articleQueryService;
+        this.articleBulkService = articleBulkService;
         this.authenticatedUser = authenticatedUser;
     }
 
@@ -250,7 +252,7 @@ public class ArticleController {
         if (ids == null || ids.isEmpty()) {
             return Map.of("processed", List.of(), "skipped", List.of());
         }
-        ArticleService.BulkResult result = articleService.bulkArchive(ids, authenticatedUser.id(), workspaceId);
+        ArticleBulkService.BulkResult result = articleBulkService.bulkArchive(ids, authenticatedUser.id(), workspaceId);
         return Map.of("processed", result.processed(), "skipped", result.skipped());
     }
 
@@ -270,7 +272,7 @@ public class ArticleController {
         if (ids == null || ids.isEmpty()) {
             return Map.of("processed", List.of(), "skipped", List.of());
         }
-        ArticleService.BulkResult result = articleService.bulkDelete(ids, authenticatedUser.id(), workspaceId);
+        ArticleBulkService.BulkResult result = articleBulkService.bulkDelete(ids, authenticatedUser.id(), workspaceId);
         return Map.of("processed", result.processed(), "skipped", result.skipped());
     }
 
@@ -287,8 +289,8 @@ public class ArticleController {
         if (workspaceId == null || workspaceId.isBlank()) {
             throw ApiException.badRequest("WORKSPACE_REQUIRED", "workspaceId is required.", "workspaceId");
         }
-        ArticleService.BulkResult result =
-                articleService.bulkPublish(ids == null ? List.of() : ids, authenticatedUser.id(), workspaceId);
+        ArticleBulkService.BulkResult result =
+                articleBulkService.bulkPublish(ids == null ? List.of() : ids, authenticatedUser.id(), workspaceId);
         return Map.of("processed", result.processed(), "skipped", result.skipped());
     }
 

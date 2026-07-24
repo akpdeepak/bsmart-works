@@ -26,7 +26,6 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.time.OffsetDateTime;
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -153,78 +152,7 @@ class ArticleServiceTest {
         verify(articleRepository, never()).save(any());
     }
 
-    // ── KR-038: bulk archive ──────────────────────────────────────────────────
-
-    @Test
-    void bulkArchive_happyPath_archivesInTenantArticles() {
-        ArticleService.BulkResult result =
-                service.bulkArchive(List.of(ARTICLE_A1), USER_A, WS_A);
-
-        assertThat(result.processed()).containsExactly(ARTICLE_A1);
-        assertThat(result.skipped()).isEmpty();
-        verify(articleRepository).save(any(Article.class));
-    }
-
-    @Test
-    void bulkArchive_crossTenantId_isSkippedNotFatal() {
-        ArticleService.BulkResult result =
-                service.bulkArchive(List.of(ARTICLE_A1, ARTICLE_B1), USER_A, WS_A);
-
-        assertThat(result.processed()).containsExactly(ARTICLE_A1);
-        assertThat(result.skipped()).containsExactly(ARTICLE_B1);
-    }
-
-    @Test
-    void bulkArchive_missingId_isSkipped() {
-        ArticleService.BulkResult result =
-                service.bulkArchive(List.of(MISSING), USER_A, WS_A);
-
-        assertThat(result.processed()).isEmpty();
-        assertThat(result.skipped()).containsExactly(MISSING);
-        verify(articleRepository, never()).save(any());
-    }
-
-    @Test
-    void bulkArchive_noEditPermission_throws403() {
-        doThrow(ApiException.forbidden("forbidden"))
-                .when(rbac).require(USER_A, WS_A, "edit_items");
-
-        assertThrows(ApiException.class,
-                () -> service.bulkArchive(List.of(ARTICLE_A1), USER_A, WS_A));
-        verify(articleRepository, never()).save(any());
-    }
-
-    // ── KR-038: bulk delete ───────────────────────────────────────────────────
-
-    @Test
-    void bulkDelete_happyPath_deletesInTenantArticles() {
-        ArticleService.BulkResult result =
-                service.bulkDelete(List.of(ARTICLE_A1), USER_A, WS_A);
-
-        assertThat(result.processed()).containsExactly(ARTICLE_A1);
-        assertThat(result.skipped()).isEmpty();
-        verify(articleRepository).deleteById(ARTICLE_A1);
-    }
-
-    @Test
-    void bulkDelete_crossTenantId_isSkippedNotFatal() {
-        ArticleService.BulkResult result =
-                service.bulkDelete(List.of(ARTICLE_A1, ARTICLE_B1), USER_A, WS_A);
-
-        assertThat(result.processed()).containsExactly(ARTICLE_A1);
-        assertThat(result.skipped()).containsExactly(ARTICLE_B1);
-        verify(articleRepository, never()).deleteById(ARTICLE_B1);
-    }
-
-    @Test
-    void bulkDelete_noDeletePermission_throws403() {
-        doThrow(ApiException.forbidden("forbidden"))
-                .when(rbac).require(USER_A, WS_A, "delete_items");
-
-        assertThrows(ApiException.class,
-                () -> service.bulkDelete(List.of(ARTICLE_A1), USER_A, WS_A));
-        verify(articleRepository, never()).deleteById(any());
-    }
+    // KR-038 bulk archive/delete/publish cases moved to ArticleBulkServiceTest with the extraction.
 
     @Test
     void approveArticle_autoPublishesAndEnqueuesWebhook() {

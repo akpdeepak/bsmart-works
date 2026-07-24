@@ -1,6 +1,5 @@
-package com.bcits.works;
+package com.bcits.works.shared;
 
-import com.bcits.works.shared.TenantContext;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

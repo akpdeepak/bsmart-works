@@ -1,6 +1,7 @@
-package com.bcits.works;
+package com.bcits.works.shared;
 
-import com.bcits.works.shared.TenantFilterInterceptor;
+import com.bcits.works.WriteRateLimitInterceptor;
+
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;

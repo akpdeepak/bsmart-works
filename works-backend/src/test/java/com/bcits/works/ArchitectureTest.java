@@ -97,7 +97,7 @@ class ArchitectureTest {
         // PR that moves a class out. Left above the measurement it silently permits regrowth.
         assertThat(flatRootSourceFiles)
                 .as("the flat root is a temporary composition layer and must never grow again")
-                .isLessThanOrEqualTo(55);
+                .isLessThanOrEqualTo(45);
     }
 
     @Test

@@ -1,4 +1,5 @@
-package com.bcits.works;
+package com.bcits.works.shared;
+
 
 import static org.assertj.core.api.Assertions.assertThat;
 

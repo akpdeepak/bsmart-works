@@ -1,6 +1,6 @@
 package com.bcits.works.auth;
 
-import com.bcits.works.NavSurfaces;
+import com.bcits.works.shared.NavSurfaces;
 import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;

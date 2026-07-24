@@ -1,5 +1,7 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.CurrentWorkspace;
+
 import com.bcits.works.auth.RbacService;
 import com.bcits.works.auth.UserRepository;
 

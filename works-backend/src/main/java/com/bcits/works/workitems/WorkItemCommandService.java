@@ -3,7 +3,7 @@ package com.bcits.works.workitems;
 import com.bcits.works.AutomationCatalog;
 import com.bcits.works.AutomationService;
 import com.bcits.works.BoardWipLimitService;
-import com.bcits.works.ConcurrencyGuard;
+import com.bcits.works.shared.ConcurrencyGuard;
 import com.bcits.works.DefaultWorkItemTypes;
 import com.bcits.works.ExtensionExecutionService;
 import com.bcits.works.FunnelService;

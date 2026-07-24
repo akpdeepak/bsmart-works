@@ -1,6 +1,5 @@
-package com.bcits.works;
+package com.bcits.works.shared;
 
-import com.bcits.works.shared.ApiException;
 
 /**
  * Optimistic-concurrency helper for work-item updates (iteration 1 follow-up — the spec

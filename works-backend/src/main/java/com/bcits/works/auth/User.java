@@ -1,6 +1,6 @@
 package com.bcits.works.auth;
 
-import com.bcits.works.SupportedLocales;
+import com.bcits.works.shared.SupportedLocales;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;

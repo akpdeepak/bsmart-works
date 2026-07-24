@@ -1,5 +1,4 @@
-package com.bcits.works;
-import com.bcits.works.shared.RbacGate;
+package com.bcits.works.shared;
 
 import java.util.LinkedHashMap;
 import java.util.List;

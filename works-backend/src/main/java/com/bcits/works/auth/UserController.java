@@ -1,6 +1,6 @@
 package com.bcits.works.auth;
 
-import com.bcits.works.SupportedLocales;
+import com.bcits.works.shared.SupportedLocales;
 import com.bcits.works.shared.RbacGate;
 
 import com.bcits.works.shared.AuthenticatedUser;

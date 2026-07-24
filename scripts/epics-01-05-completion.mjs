@@ -60,9 +60,9 @@ check('EPIC 1', 'SSE-only query token',
   'query-param JWT handling is exact-path restricted and regression-tested');
 
 check('EPIC 2', 'Protected-profile startup guard',
-  sourceHasAll('works-backend/src/main/java/com/bcits/works/ProductionConfigurationGuard.java',
+  sourceHasAll('works-backend/src/main/java/com/bcits/works/shared/ProductionConfigurationGuard.java',
     ['prod', 'staging', 'BSMART_JWT_SECRET', 'exposeDevVerificationToken']) &&
-  exists('works-backend/src/test/java/com/bcits/works/ProductionConfigurationGuardTest.java'),
+  exists('works-backend/src/test/java/com/bcits/works/shared/ProductionConfigurationGuardTest.java'),
   'production/staging reject missing or development JWT settings');
 check('EPIC 2', 'Deployment health contributors',
   sourceHasAll('works-backend/src/main/java/com/bcits/works/devsync/DeploymentHealthIndicators.java',

@@ -1,7 +1,7 @@
 package com.bcits.works.auth;
 
-import com.bcits.works.CurrentWorkspace;
-import com.bcits.works.TenantFilterSettings;
+import com.bcits.works.shared.CurrentWorkspace;
+import com.bcits.works.shared.TenantFilterSettings;
 
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.RbacGate;

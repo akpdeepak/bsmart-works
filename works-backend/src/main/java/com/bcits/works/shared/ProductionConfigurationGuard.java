@@ -1,4 +1,4 @@
-package com.bcits.works;
+package com.bcits.works.shared;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;

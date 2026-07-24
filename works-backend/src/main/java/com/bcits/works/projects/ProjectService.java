@@ -1,6 +1,6 @@
 package com.bcits.works.projects;
 
-import com.bcits.works.CurrentWorkspace;
+import com.bcits.works.shared.CurrentWorkspace;
 import com.bcits.works.auth.UserRepository;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.EventService;

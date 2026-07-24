@@ -1,4 +1,5 @@
 import { Button } from '@/components/works/button';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, Star, SquarePen, X } from 'lucide-react';
 import { DensityToggle } from '@/components/works/atoms/density-toggle';
@@ -334,7 +335,7 @@ export default function BoardView({
       )}
 
       {loading ? (
-        <div className="flex gap-4 flex-1 overflow-x-auto pb-4" aria-busy="true" aria-label={t('deliver.board.loadingBoard')}>
+        <AsyncBoundary loading label={t('deliver.board.loadingBoard')} className="flex gap-4 flex-1 overflow-x-auto pb-4" skeleton={<>
           {columns.map(col => (
             <div key={col.key} className="flex-1 min-w-56 flex flex-col bg-neutral-100 dark:bg-neutral-800 rounded-xl p-3">
               <div className="flex items-center justify-between mb-3 px-1">
@@ -354,7 +355,7 @@ export default function BoardView({
               ))}
             </div>
           ))}
-        </div>
+        </>} />
       ) : groupBy === 'none' ? (
         <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
           {columns.map(col => {

@@ -1,4 +1,5 @@
 import { Map as MapIcon, Lightbulb, Send, Target, FileText, Megaphone, ChevronUp, Trash2 } from 'lucide-react';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { Button } from '@/components/works/button';
 import { Field } from '@/components/works/field';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -22,7 +23,7 @@ export default function PoWorkspaceView({
   if (loading && projects.length === 0) {
     return (
       <PageLayout header={null}>
-        <ListSkeleton rows={4} />
+        <AsyncBoundary loading label="Loading product owner workspace" skeleton={<ListSkeleton rows={4} />} />
       </PageLayout>
     );
   }

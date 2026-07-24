@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Search, FileText, AlertCircle, Bookmark, X } from 'lucide-react';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
+import { Search, FileText, Bookmark, X } from 'lucide-react';
 import { PageLayout } from '@/components/works/templates/page-layout';
 import { Tabs, TabList, Tab, TabPanel } from '@/components/works/atoms/tabs';
-import { EmptyState } from '@/components/works/atoms/empty-state';
 import { ListSkeleton } from '@/components/works/atoms/skeleton';
 import { Button } from '@/components/works/button';
 import { IconButton } from '@/components/works/atoms/icon-button';
@@ -272,35 +272,27 @@ export default function SearchView({ workspaceId, onSelectItem, onSelectArticle 
         </TabList>
 
         <TabPanel value={facet}>
-          {/* Loading */}
-          {isLoading && (
-            <div aria-live="polite" aria-label="Searching">
-              <ListSkeleton rows={6} className="mt-4" />
-            </div>
-          )}
-
-          {/* Empty prompt — query too short */}
+          {/* Empty prompt — query too short. This is a distinct pre-query state, not an empty
+              result set, so it stays outside the boundary rather than being modelled as `empty`. */}
           {showPrompt && (
             <p className="mt-10 text-center text-sm text-neutral-600 dark:text-neutral-400">
               Type to search across your workspace
             </p>
           )}
 
-          {/* No results */}
-          {showEmpty && (
-            <EmptyState
-              icon={Search}
-              title={`No results for "${query}"`}
-              subtitle="Try different keywords or switch to another tab."
-            />
-          )}
-
-          {/* Error */}
-          {isError && (
-            <EmptyState
-              icon={AlertCircle}
-              title="Search unavailable"
-              subtitle="Could not reach the search service. Try again in a moment."
+          {/* Loading / error / no-results all share the canonical treatment (RB-30 §6). */}
+          {!showPrompt && !showResults && (
+            <AsyncBoundary
+              loading={isLoading}
+              label="Searching"
+              className="mt-4"
+              skeleton={<ListSkeleton rows={6} />}
+              error={isError ? 'Could not reach the search service. Try again in a moment.' : null}
+              errorTitle="Search unavailable"
+              empty={showEmpty}
+              emptyIcon={Search}
+              emptyTitle={`No results for "${query}"`}
+              emptySubtitle="Try different keywords or switch to another tab."
             />
           )}
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { FileText } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -153,8 +154,7 @@ export default function BacklogView({
   if (loading && backlogItems.length === 0 && sprints.length === 0) {
     return (
       <PageLayout header={null}>
-        <Skeleton className="h-7 w-32 mb-6" />
-        <ListSkeleton rows={6} />
+        <AsyncBoundary loading label="Loading backlog" skeleton={<><Skeleton className="h-7 w-32 mb-6" /><ListSkeleton rows={6} /></>} />
       </PageLayout>
     );
   }

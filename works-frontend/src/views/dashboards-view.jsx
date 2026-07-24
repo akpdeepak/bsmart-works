@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { LayoutDashboard, ArrowLeft, Puzzle } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
@@ -124,7 +125,7 @@ export default function DashboardsView({
   if (loading && customDashboards.length === 0 && !selectedDashboard) {
     return (
       <PageLayout header={null}>
-        <ListSkeleton rows={4} />
+        <AsyncBoundary loading label="Loading dashboards" skeleton={<ListSkeleton rows={4} />} />
       </PageLayout>
     );
   }

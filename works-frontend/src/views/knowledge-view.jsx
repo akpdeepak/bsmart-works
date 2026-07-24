@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import {
   Search, Folder, FileText, File as FileIcon, ArrowLeft, BookOpen,
   AlertTriangle, Pencil, Eye, ChevronRight, LayoutTemplate,
@@ -657,15 +658,18 @@ export default function KnowledgeView({
 
         {/* Space list */}
         <div className="flex-1 overflow-y-auto px-2 pb-2">
-          {knowledgeSpacesLoading && knowledgeSpaces.length === 0 ? (
-            <div className="space-y-1.5 px-1 py-2" aria-busy="true" aria-label="Loading spaces">
-              {[0, 1, 2].map(i => <div key={i} className="h-8 rounded-lg animate-pulse bg-neutral-100 dark:bg-neutral-700" />)}
-            </div>
-          ) : knowledgeSpaces.length === 0 && !knowledgeSpacesLoading ? (
-            <p className="text-xs text-neutral-500 text-center py-6 px-3 leading-relaxed">
-              No spaces yet.<br />Create one to get started.
-            </p>
-          ) : null}
+          {knowledgeSpaces.length === 0 && (
+            <AsyncBoundary
+              loading={knowledgeSpacesLoading}
+              label="Loading spaces"
+              className="space-y-1.5 px-1 py-2"
+              skeleton={[0, 1, 2].map(i => <div key={i} className="h-8 rounded-lg animate-pulse bg-neutral-100 dark:bg-neutral-700" />)}
+              empty
+              emptyIcon={Folder}
+              emptyTitle="No spaces yet"
+              emptySubtitle="Create one to get started."
+            />
+          )}
           {knowledgeSpaces.map(space => (
             <div key={space.id}>
               <Button unstyled
@@ -916,15 +920,19 @@ export default function KnowledgeView({
                 />
 
                 {knowledgeArticlesLoading && knowledgeArticles.length === 0 ? (
-                  <div className="space-y-2" aria-busy="true" aria-label="Loading articles">
-                    {[0, 1, 2, 3].map(i => <div key={i} className="h-20 rounded-xl animate-pulse bg-neutral-100 dark:bg-neutral-800" />)}
-                  </div>
+                  <AsyncBoundary
+                    loading
+                    label="Loading articles"
+                    className="space-y-2"
+                    skeleton={[0, 1, 2, 3].map(i => <div key={i} className="h-20 rounded-xl animate-pulse bg-neutral-100 dark:bg-neutral-800" />)}
+                  />
                 ) : knowledgeArticles.length === 0 ? (
-                  <EmptyState
-                    icon={FileIcon}
-                    title={selectedSpace ? `No articles in ${selectedSpace.name}` : 'No articles'}
-                    subtitle="Create your first article to capture knowledge for the team."
-                    action={selectedSpace && (
+                  <AsyncBoundary
+                    empty
+                    emptyIcon={FileIcon}
+                    emptyTitle={selectedSpace ? `No articles in ${selectedSpace.name}` : 'No articles'}
+                    emptySubtitle="Create your first article to capture knowledge for the team."
+                    emptyAction={selectedSpace && (
                       <Button variant="action" onClick={() => setIsArticleFormOpen(true)}>Write Article</Button>
                     )}
                   />

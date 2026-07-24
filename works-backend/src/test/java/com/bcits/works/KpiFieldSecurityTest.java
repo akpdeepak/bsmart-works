@@ -12,6 +12,7 @@ import com.bcits.works.workitems.WorkItemRepository;
 import com.bcits.works.projects.Project;
 import com.bcits.works.projects.ProjectRepository;
 import com.bcits.works.reporting.KpiService;
+import com.bcits.works.reporting.MetricDefinitionService;
 import com.bcits.works.reporting.MetricDefinition;
 import com.bcits.works.reporting.MetricDefinitionRepository;
 import com.bcits.works.reporting.MetricShareRepository;
@@ -72,8 +73,10 @@ class KpiFieldSecurityTest {
     private final BqlQueryExecutor bqlExecutor = new BqlQueryExecutor(bqlCompiler, jdbc);
     private final RbacService rbac = mock(RbacService.class);
 
-    private final KpiService kpi = new KpiService(workItems, projects, teams, definitions,
-        snapshots, shares, controlPlane, bqlCompiler, bqlExecutor, rbac);
+    private final MetricDefinitionService metricDefs = new MetricDefinitionService(
+        definitions, snapshots, shares, bqlCompiler, rbac);
+    private final KpiService kpi = new KpiService(workItems, projects, teams,
+        controlPlane, bqlExecutor, metricDefs);
 
     KpiFieldSecurityTest() {
         when(rbac.getUserTier(LOW, WS)).thenReturn(2);    // MEMBER
@@ -116,14 +119,14 @@ class KpiFieldSecurityTest {
 
     @Test
     void createDefinition_overSensitiveFormula_isForbiddenForLowTier() {
-        assertThatThrownBy(() -> kpi.createDefinition(WS, LOW, sensitiveFormulaDef()))
+        assertThatThrownBy(() -> metricDefs.createDefinition(WS, LOW, sensitiveFormulaDef()))
             .isInstanceOf(ApiException.class)
             .satisfies(e -> assertThat(((ApiException) e).getStatus().value()).isEqualTo(403));
     }
 
     @Test
     void createDefinition_overSensitiveSourceField_isForbiddenForLowTier() {
-        assertThatThrownBy(() -> kpi.createDefinition(WS, LOW, sensitiveSourceFieldDef()))
+        assertThatThrownBy(() -> metricDefs.createDefinition(WS, LOW, sensitiveSourceFieldDef()))
             .isInstanceOf(ApiException.class)
             .satisfies(e -> assertThat(((ApiException) e).getStatus().value()).isEqualTo(403));
     }
@@ -133,7 +136,7 @@ class KpiFieldSecurityTest {
         when(definitions.save(org.mockito.ArgumentMatchers.any(MetricDefinition.class)))
             .thenAnswer(inv -> inv.getArgument(0));
 
-        MetricDefinition saved = kpi.createDefinition(WS, LEAD, sensitiveFormulaDef());
+        MetricDefinition saved = metricDefs.createDefinition(WS, LEAD, sensitiveFormulaDef());
 
         assertThat(saved.getId()).startsWith("MD-");
         assertThat(saved.getBqlFormula()).isEqualTo("businessValue > 100");
@@ -144,7 +147,7 @@ class KpiFieldSecurityTest {
         when(definitions.save(org.mockito.ArgumentMatchers.any(MetricDefinition.class)))
             .thenAnswer(inv -> inv.getArgument(0));
 
-        MetricDefinition saved = kpi.createDefinition(WS, LOW, nonSensitiveDef());
+        MetricDefinition saved = metricDefs.createDefinition(WS, LOW, nonSensitiveDef());
 
         assertThat(saved.getId()).startsWith("MD-");
     }
@@ -156,7 +159,7 @@ class KpiFieldSecurityTest {
         when(definitions.findByWorkspaceIdOrderByNameAsc(WS))
             .thenReturn(List.of(sensitiveFormulaDef(), sensitiveSourceFieldDef(), nonSensitiveDef()));
 
-        List<MetricDefinition> visible = kpi.listDefinitions(WS, LOW);
+        List<MetricDefinition> visible = metricDefs.listDefinitions(WS, LOW);
 
         assertThat(visible).extracting(MetricDefinition::getMetricKey)
             .containsExactly("open_stories");   // both sensitive ones filtered out
@@ -167,7 +170,7 @@ class KpiFieldSecurityTest {
         when(definitions.findByWorkspaceIdOrderByNameAsc(WS))
             .thenReturn(List.of(sensitiveFormulaDef(), sensitiveSourceFieldDef(), nonSensitiveDef()));
 
-        List<MetricDefinition> visible = kpi.listDefinitions(WS, LEAD);
+        List<MetricDefinition> visible = metricDefs.listDefinitions(WS, LEAD);
 
         assertThat(visible).extracting(MetricDefinition::getMetricKey)
             .containsExactlyInAnyOrder("high_value_open", "bv_sum", "open_stories");
@@ -213,7 +216,7 @@ class KpiFieldSecurityTest {
         when(definitions.findByWorkspaceIdOrderByNameAsc(FOREIGN_WS))
             .thenReturn(List.of(sensitiveFormulaDef(), nonSensitiveDef()));
 
-        List<MetricDefinition> visible = kpi.listDefinitions(FOREIGN_WS, LEAD);
+        List<MetricDefinition> visible = metricDefs.listDefinitions(FOREIGN_WS, LEAD);
 
         assertThat(visible).extracting(MetricDefinition::getMetricKey)
             .containsExactly("open_stories");

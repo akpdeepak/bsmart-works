@@ -51,8 +51,10 @@ class KpiServiceTest {
     private final BqlQueryExecutor bqlExecutor = mock(BqlQueryExecutor.class);
     private final RbacService rbac = mock(RbacService.class);
 
-    private final KpiService kpi = new KpiService(workItems, projects, teams, definitions,
-        snapshots, shares, controlPlane, bqlCompiler, bqlExecutor, rbac);
+    private final MetricDefinitionService metricDefs = new MetricDefinitionService(
+        definitions, snapshots, shares, bqlCompiler, rbac);
+    private final KpiService kpi = new KpiService(workItems, projects, teams,
+        controlPlane, bqlExecutor, metricDefs);
 
     // By default, return an empty definitions list so applyTargetsAndCustomMetrics is a no-op.
     { when(definitions.findByWorkspaceIdOrderByNameAsc(WS)).thenReturn(List.of()); }
@@ -120,7 +122,7 @@ class KpiServiceTest {
 
     @Test
     void share_refusesSelfShare() {
-        assertThatThrownBy(() -> kpi.share(WS, ME, ME)).isInstanceOf(ApiException.class);
+        assertThatThrownBy(() -> metricDefs.share(WS, ME, ME)).isInstanceOf(ApiException.class);
     }
 
     // ── custom definition validation ────────────────────────────────────────────────
@@ -130,7 +132,7 @@ class KpiServiceTest {
         MetricDefinition def = new MetricDefinition();
         def.setPrimitive("AVG");
         def.setScopeLevel("INDIVIDUAL");
-        assertThatThrownBy(() -> kpi.createDefinition(WS, ME, def)).isInstanceOf(ApiException.class);
+        assertThatThrownBy(() -> metricDefs.createDefinition(WS, ME, def)).isInstanceOf(ApiException.class);
     }
 
     // ── narrative falls back deterministically ───────────────────────────────────────

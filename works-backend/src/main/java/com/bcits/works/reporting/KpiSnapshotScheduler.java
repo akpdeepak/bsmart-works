@@ -31,10 +31,13 @@ public class KpiSnapshotScheduler {
 
     private final WorkspaceRepository workspaces;
     private final KpiService kpiService;
+    private final MetricDefinitionService metricDefs;
 
-    public KpiSnapshotScheduler(WorkspaceRepository workspaces, KpiService kpiService) {
+    public KpiSnapshotScheduler(WorkspaceRepository workspaces, KpiService kpiService,
+                                MetricDefinitionService metricDefs) {
         this.workspaces = workspaces;
         this.kpiService = kpiService;
+        this.metricDefs = metricDefs;
     }
 
     /**
@@ -81,7 +84,7 @@ public class KpiSnapshotScheduler {
     private void writeLayers(String workspaceId, String period, List<KpiService.Layer> layers) {
         for (KpiService.Layer layer : layers) {
             for (KpiService.MetricValue mv : layer.metrics()) {
-                kpiService.snapshot(workspaceId, mv.key(), layer.scopeLevel(), layer.scopeId(),
+                metricDefs.snapshot(workspaceId, mv.key(), layer.scopeLevel(), layer.scopeId(),
                     period, mv.value(), mv.sampleSize());
             }
         }

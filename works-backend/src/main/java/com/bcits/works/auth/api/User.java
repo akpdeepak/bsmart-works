@@ -1,4 +1,6 @@
 package com.bcits.works.auth.api;
+import com.bcits.works.shared.BlindIndexService;
+import com.bcits.works.shared.PiiVaultService;
 
 import com.bcits.works.shared.SupportedLocales;
 

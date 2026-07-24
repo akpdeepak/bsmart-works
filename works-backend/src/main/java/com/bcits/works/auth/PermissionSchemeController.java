@@ -1,4 +1,5 @@
 package com.bcits.works.auth;
+import com.bcits.works.workspaces.api.Workspace;
 
 import com.bcits.works.FieldDef;
 import com.bcits.works.FieldDefRepository;

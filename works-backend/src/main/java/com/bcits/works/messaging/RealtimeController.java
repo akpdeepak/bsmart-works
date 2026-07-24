@@ -1,6 +1,7 @@
 package com.bcits.works.messaging;
+import com.bcits.works.security.SecurityConfig;
 
-import com.bcits.works.RealtimeService;
+import com.bcits.works.shared.api.RealtimeService;
 import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.RbacGate;
 

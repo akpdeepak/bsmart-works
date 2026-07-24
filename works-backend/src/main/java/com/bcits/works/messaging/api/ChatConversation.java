@@ -1,4 +1,6 @@
 package com.bcits.works.messaging.api;
+import com.bcits.works.auth.api.CustomerUser;
+import com.bcits.works.shared.PiiVaultService;
 import com.bcits.works.messaging.ConversationType;
 
 import com.bcits.works.shared.WorkspaceFilterActivator;

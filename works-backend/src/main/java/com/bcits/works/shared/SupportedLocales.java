@@ -1,4 +1,6 @@
 package com.bcits.works.shared;
+import com.bcits.works.auth.UserController;
+import com.bcits.works.auth.api.User;
 
 import java.util.Set;
 

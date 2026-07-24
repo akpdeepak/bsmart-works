@@ -1,6 +1,6 @@
 package com.bcits.works.workitems;
 
-import com.bcits.works.DefaultWorkItemTypes;
+import com.bcits.works.workitems.DefaultWorkItemTypes;
 
 import java.util.Collection;
 import java.util.LinkedHashSet;

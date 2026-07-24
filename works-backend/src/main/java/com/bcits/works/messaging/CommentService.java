@@ -4,7 +4,7 @@ import com.bcits.works.messaging.api.CommentRepository;
 import com.bcits.works.messaging.api.Notification;
 import com.bcits.works.messaging.api.NotificationRepository;
 
-import com.bcits.works.EmailService;
+import com.bcits.works.auth.api.EmailService;
 import com.bcits.works.auth.api.UserRepository;
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.EventService;

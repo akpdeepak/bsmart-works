@@ -1,4 +1,6 @@
 package com.bcits.works.projects;
+import com.bcits.works.auth.api.User;
+import com.bcits.works.projects.api.Project;
 import com.bcits.works.projects.api.ProjectTeamMember;
 import com.bcits.works.projects.api.ProjectTeamMemberRepository;
 import com.bcits.works.projects.api.Sprint;

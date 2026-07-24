@@ -1,4 +1,5 @@
 package com.bcits.works.shared;
+import com.bcits.works.projects.ProjectService;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;

@@ -1,4 +1,6 @@
 package com.bcits.works.workitems;
+import com.bcits.works.AutomationService;
+import com.bcits.works.ExtensionExecutionService;
 import com.bcits.works.workitems.api.WorkItem;
 
 import java.util.Locale;

@@ -1,4 +1,5 @@
 package com.bcits.works.ai;
+import com.bcits.works.AiController;
 
 import com.bcits.works.shared.ApiException;
 

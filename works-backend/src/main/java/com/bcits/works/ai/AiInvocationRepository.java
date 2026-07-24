@@ -1,4 +1,5 @@
 package com.bcits.works.ai;
+import com.bcits.works.workspaces.api.Workspace;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

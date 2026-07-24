@@ -1,4 +1,6 @@
 package com.bcits.works.service;
+import com.bcits.works.messaging.api.ChatConversation;
+import com.bcits.works.messaging.api.ChatMessage;
 
 import com.bcits.works.shared.TenantScope;
 

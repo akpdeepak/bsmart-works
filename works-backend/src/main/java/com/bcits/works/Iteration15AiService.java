@@ -1,4 +1,6 @@
 package com.bcits.works;
+import com.bcits.works.projects.Release;
+import com.bcits.works.projects.api.Project;
 
 import com.bcits.works.service.CustomerFeedbackRepository;
 

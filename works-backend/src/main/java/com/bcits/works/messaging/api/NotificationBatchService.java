@@ -1,4 +1,5 @@
 package com.bcits.works.messaging.api;
+import com.bcits.works.workspaces.api.Workspace;
 import com.bcits.works.messaging.PushDeliveryService;
 
 import com.bcits.works.FocusModeService;

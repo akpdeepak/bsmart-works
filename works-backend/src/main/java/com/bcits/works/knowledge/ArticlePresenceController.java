@@ -1,4 +1,5 @@
 package com.bcits.works.knowledge;
+import com.bcits.works.workspaces.api.Workspace;
 import com.bcits.works.knowledge.api.Article;
 import com.bcits.works.knowledge.api.ArticleRepository;
 import com.bcits.works.knowledge.api.KnowledgeSpace;

@@ -1,4 +1,5 @@
 package com.bcits.works.messaging;
+import com.bcits.works.workspaces.api.Workspace;
 import com.bcits.works.messaging.api.ActionItem;
 import com.bcits.works.messaging.api.ActionItemRepository;
 

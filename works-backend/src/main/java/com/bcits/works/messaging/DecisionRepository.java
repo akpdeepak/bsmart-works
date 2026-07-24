@@ -1,6 +1,7 @@
 package com.bcits.works.messaging;
+import com.bcits.works.workspaces.api.Workspace;
 
-import com.bcits.works.Decision;
+import com.bcits.works.shared.api.Decision;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

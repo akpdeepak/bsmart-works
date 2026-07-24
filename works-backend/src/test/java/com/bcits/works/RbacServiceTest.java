@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.workspaces.api.Workspace;
 
 import com.bcits.works.shared.CurrentWorkspace;
 import com.bcits.works.shared.TenantFilterSettings;

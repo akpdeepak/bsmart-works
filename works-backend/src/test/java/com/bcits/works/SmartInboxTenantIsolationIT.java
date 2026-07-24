@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.auth.api.User;
 
 import com.bcits.works.messaging.NotificationActivityService;
 import com.bcits.works.messaging.SmartInboxService;

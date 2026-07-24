@@ -1,7 +1,7 @@
 package com.bcits.works.service;
 
-import com.bcits.works.CustomerUser;
-import com.bcits.works.CustomerUserRepository;
+import com.bcits.works.auth.api.CustomerUser;
+import com.bcits.works.auth.api.CustomerUserRepository;
 import com.bcits.works.auth.api.JwtUtil;
 import com.bcits.works.auth.api.TokenRevocationService;
 import com.bcits.works.security.api.CustomerUserPiiService;

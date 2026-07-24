@@ -1,4 +1,6 @@
 package com.bcits.works;
+import com.bcits.works.projects.BoardController;
+import com.bcits.works.workitems.api.WorkflowStatus;
 
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.workitems.api.StatusCategoryResolver;

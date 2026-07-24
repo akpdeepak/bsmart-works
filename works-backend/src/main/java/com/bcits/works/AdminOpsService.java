@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.workspaces.api.Workspace;
 
 import com.bcits.works.workspaces.LicenseSeats;
 import com.bcits.works.workspaces.LicenseSeatsRepository;
@@ -8,7 +9,7 @@ import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.EventService;
 import com.bcits.works.ai.api.AiControlPlaneService;
-import com.bcits.works.automation.WebhookDelivery;
+import com.bcits.works.automation.api.WebhookDelivery;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;

@@ -1,4 +1,5 @@
 package com.bcits.works.workitems;
+import com.bcits.works.workspaces.api.Workspace;
 import com.bcits.works.workitems.api.StatusCategoryResolver;
 import com.bcits.works.workitems.api.StatusConfigService;
 import com.bcits.works.workitems.api.WorkflowStatus;

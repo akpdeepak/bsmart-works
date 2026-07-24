@@ -1,4 +1,5 @@
 package com.bcits.works.service;
+import com.bcits.works.security.SecurityConfig;
 
 import com.bcits.works.auth.api.JwtUtil;
 import com.bcits.works.auth.api.TokenRevocationService;

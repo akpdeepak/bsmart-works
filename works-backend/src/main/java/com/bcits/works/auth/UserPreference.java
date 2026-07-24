@@ -1,4 +1,5 @@
 package com.bcits.works.auth;
+import com.bcits.works.auth.api.User;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

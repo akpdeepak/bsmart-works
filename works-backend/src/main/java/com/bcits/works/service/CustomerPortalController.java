@@ -1,4 +1,5 @@
 package com.bcits.works.service;
+import com.bcits.works.knowledge.api.Article;
 
 import com.bcits.works.shared.AutomationCatalog;
 import com.bcits.works.AutomationService;

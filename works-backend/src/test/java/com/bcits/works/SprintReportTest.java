@@ -1,4 +1,6 @@
 package com.bcits.works;
+import com.bcits.works.projects.ProjectService;
+import com.bcits.works.workspaces.api.Workspace;
 
 import com.bcits.works.auth.RbacService;
 

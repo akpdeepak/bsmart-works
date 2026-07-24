@@ -1,7 +1,7 @@
 package com.bcits.works.workitems;
 import com.bcits.works.workitems.api.WorkItem;
 
-import com.bcits.works.EmailService;
+import com.bcits.works.auth.api.EmailService;
 import com.bcits.works.auth.api.UserRepository;
 import com.bcits.works.messaging.api.NotificationBatchService;
 import com.bcits.works.messaging.api.WatcherService;

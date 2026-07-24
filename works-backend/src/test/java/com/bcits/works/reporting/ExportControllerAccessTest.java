@@ -1,4 +1,5 @@
 package com.bcits.works.reporting;
+import com.bcits.works.shared.GlobalExceptionHandler;
 
 
 import com.bcits.works.auth.RbacService;

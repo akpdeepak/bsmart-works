@@ -1,4 +1,5 @@
 package com.bcits.works.projects;
+import com.bcits.works.projects.api.Project;
 
 import com.bcits.works.messaging.api.ActionItem;
 import com.bcits.works.messaging.api.ActionItemRepository;

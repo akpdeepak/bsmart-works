@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.api.Risk;
 import com.bcits.works.projects.RiskController;
 import com.bcits.works.projects.RiskRepository;
 

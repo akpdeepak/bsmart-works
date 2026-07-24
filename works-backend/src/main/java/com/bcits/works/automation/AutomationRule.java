@@ -1,4 +1,5 @@
 package com.bcits.works.automation;
+import com.bcits.works.AutomationService;
 
 import com.bcits.works.shared.WorkspaceFilterActivator;
 

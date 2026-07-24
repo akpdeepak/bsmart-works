@@ -1,4 +1,7 @@
 package com.bcits.works.security.api;
+import com.bcits.works.auth.api.CustomerUser;
+import com.bcits.works.auth.api.Stakeholder;
+import com.bcits.works.workspaces.api.Workspace;
 
 import com.bcits.works.shared.PiiVaultPolicy;
 import com.bcits.works.shared.PiiVaultService;

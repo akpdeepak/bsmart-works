@@ -1,4 +1,5 @@
 package com.bcits.works.workitems;
+import com.bcits.works.projects.api.Project;
 
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.AuthenticatedUser;

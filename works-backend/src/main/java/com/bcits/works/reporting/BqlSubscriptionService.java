@@ -1,6 +1,6 @@
 package com.bcits.works.reporting;
 
-import com.bcits.works.EmailService;
+import com.bcits.works.auth.api.EmailService;
 import com.bcits.works.workspaces.api.SavedView;
 import com.bcits.works.workspaces.api.SavedViewRepository;
 import com.bcits.works.shared.RbacGate;

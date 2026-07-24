@@ -1,4 +1,5 @@
 package com.bcits.works.projects.api;
+import com.bcits.works.workspaces.api.Workspace;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

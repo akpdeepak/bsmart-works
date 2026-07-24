@@ -1,4 +1,6 @@
 package com.bcits.works;
+import com.bcits.works.shared.OperatingModelGate;
+import com.bcits.works.workitems.api.FunnelService;
 
 import com.bcits.works.workspaces.api.Workspace;
 import com.bcits.works.workspaces.api.WorkspaceRepository;

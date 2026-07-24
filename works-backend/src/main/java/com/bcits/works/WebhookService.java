@@ -1,7 +1,8 @@
 package com.bcits.works;
+import com.bcits.works.workspaces.api.Workspace;
 
 import com.bcits.works.shared.ApiException;
-import com.bcits.works.automation.WebhookDelivery;
+import com.bcits.works.automation.api.WebhookDelivery;
 import com.bcits.works.automation.WebhookDeliveryRepository;
 import com.bcits.works.automation.WebhookSubscription;
 import com.bcits.works.automation.WebhookSubscriptionRepository;

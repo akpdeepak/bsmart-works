@@ -1,4 +1,6 @@
 package com.bcits.works.workspaces;
+import com.bcits.works.auth.api.User;
+import com.bcits.works.projects.api.Project;
 
 import com.bcits.works.projects.api.CeremonySession;
 import com.bcits.works.projects.api.CeremonySessionRepository;

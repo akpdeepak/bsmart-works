@@ -1,4 +1,6 @@
 package com.bcits.works.devsync;
+import com.bcits.works.messaging.Meeting;
+import com.bcits.works.workspaces.api.Workspace;
 
 import com.bcits.works.AiCapabilities;
 import com.bcits.works.automation.api.CalendarSyncService;

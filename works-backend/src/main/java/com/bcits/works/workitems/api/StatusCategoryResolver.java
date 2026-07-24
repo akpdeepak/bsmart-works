@@ -1,4 +1,5 @@
 package com.bcits.works.workitems.api;
+import com.bcits.works.workitems.Workflow;
 
 import java.util.Locale;
 import java.util.Map;

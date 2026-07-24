@@ -1,7 +1,8 @@
 package com.bcits.works.security.api;
+import com.bcits.works.auth.api.UserPiiService;
 
-import com.bcits.works.CustomerUser;
-import com.bcits.works.CustomerUserRepository;
+import com.bcits.works.auth.api.CustomerUser;
+import com.bcits.works.auth.api.CustomerUserRepository;
 import com.bcits.works.shared.BlindIndexService;
 import com.bcits.works.shared.PiiVaultPolicy;
 import com.bcits.works.shared.PiiVaultService;

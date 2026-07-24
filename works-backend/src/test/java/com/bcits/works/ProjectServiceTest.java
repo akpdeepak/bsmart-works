@@ -1,4 +1,5 @@
 package com.bcits.works;
+import com.bcits.works.shared.OperatingModelGate;
 
 import com.bcits.works.shared.CurrentWorkspace;
 

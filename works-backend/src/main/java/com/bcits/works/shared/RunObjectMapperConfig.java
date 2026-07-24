@@ -1,4 +1,5 @@
 package com.bcits.works.shared;
+import com.bcits.works.ai.AnthropicAiProvider;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;

@@ -1,4 +1,6 @@
 package com.bcits.works.reporting;
+import com.bcits.works.shared.api.Risk;
+import com.bcits.works.workspaces.api.Workspace;
 
 import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.RbacGate;

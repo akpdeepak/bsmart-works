@@ -1,6 +1,7 @@
 package com.bcits.works.knowledge;
+import com.bcits.works.auth.api.User;
 
-import com.bcits.works.RealtimeService;
+import com.bcits.works.shared.api.RealtimeService;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

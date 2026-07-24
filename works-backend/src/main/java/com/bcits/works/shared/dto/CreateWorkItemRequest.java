@@ -1,4 +1,5 @@
 package com.bcits.works.shared.dto;
+import com.bcits.works.projects.api.Project;
 
 import jakarta.validation.constraints.NotBlank;
 

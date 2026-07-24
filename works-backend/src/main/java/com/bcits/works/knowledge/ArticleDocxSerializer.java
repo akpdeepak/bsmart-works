@@ -1,4 +1,5 @@
 package com.bcits.works.knowledge;
+import com.bcits.works.knowledge.api.Article;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

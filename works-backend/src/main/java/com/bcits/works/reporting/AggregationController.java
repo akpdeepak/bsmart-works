@@ -1,4 +1,5 @@
 package com.bcits.works.reporting;
+import com.bcits.works.projects.api.Project;
 
 import com.bcits.works.workspaces.api.Team;
 import com.bcits.works.workspaces.api.TeamRepository;

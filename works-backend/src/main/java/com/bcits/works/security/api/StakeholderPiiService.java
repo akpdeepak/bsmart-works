@@ -1,6 +1,7 @@
 package com.bcits.works.security.api;
+import com.bcits.works.service.StakeholderController;
 
-import com.bcits.works.Stakeholder;
+import com.bcits.works.auth.api.Stakeholder;
 import com.bcits.works.shared.PiiVaultPolicy;
 import com.bcits.works.shared.PiiVaultService;
 import com.bcits.works.shared.TenantScope;

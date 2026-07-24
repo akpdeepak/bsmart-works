@@ -1,4 +1,7 @@
 package com.bcits.works.workitems;
+import com.bcits.works.projects.Assumption;
+import com.bcits.works.projects.Dependency;
+import com.bcits.works.shared.api.Risk;
 import com.bcits.works.workitems.api.StatusConfigService;
 
 import java.util.LinkedHashMap;

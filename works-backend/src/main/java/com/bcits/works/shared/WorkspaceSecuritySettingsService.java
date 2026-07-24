@@ -1,4 +1,5 @@
 package com.bcits.works.shared;
+import com.bcits.works.workspaces.api.Workspace;
 
 import org.springframework.stereotype.Service;
 

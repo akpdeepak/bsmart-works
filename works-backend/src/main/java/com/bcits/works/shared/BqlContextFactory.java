@@ -1,4 +1,6 @@
 package com.bcits.works.shared;
+import com.bcits.works.workitems.WorkItemReadService;
+import com.bcits.works.workspaces.api.Workspace;
 
 
 import java.util.LinkedHashMap;

@@ -1,4 +1,8 @@
 package com.bcits.works;
+import com.bcits.works.auth.api.CustomerUser;
+import com.bcits.works.auth.api.CustomerUserRepository;
+import com.bcits.works.auth.api.Stakeholder;
+import com.bcits.works.workspaces.api.Workspace;
 
 
 import com.bcits.works.shared.TenantScope;

@@ -1,4 +1,5 @@
 package com.bcits.works.automation;
+import com.bcits.works.automation.api.WebhookDelivery;
 
 import com.bcits.works.WebhookService;
 import com.bcits.works.shared.AuthenticatedUser;

@@ -1,4 +1,8 @@
 package com.bcits.works;
+import com.bcits.works.auth.api.User;
+import com.bcits.works.projects.api.Project;
+import com.bcits.works.sla.SlaInstance;
+import com.bcits.works.workspaces.api.Workspace;
 import com.bcits.works.sla.SlaEvaluationService;
 import com.bcits.works.sla.SlaInstanceRepository;
 import com.bcits.works.sla.SlaPolicy;

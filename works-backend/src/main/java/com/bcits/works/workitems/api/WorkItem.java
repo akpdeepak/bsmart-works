@@ -1,4 +1,5 @@
 package com.bcits.works.workitems.api;
+import com.bcits.works.workspaces.api.Team;
 
 import com.bcits.works.shared.WorkspaceFilterActivator;
 

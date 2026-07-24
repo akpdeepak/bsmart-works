@@ -1,6 +1,6 @@
 package com.bcits.works.automation;
 
-import com.bcits.works.AutomationCatalog;
+import com.bcits.works.shared.AutomationCatalog;
 import com.bcits.works.AutomationService;
 import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.PageResponse;

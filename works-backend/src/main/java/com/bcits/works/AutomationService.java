@@ -1,11 +1,13 @@
 package com.bcits.works;
 
+import com.bcits.works.shared.AutomationCatalog;
 import com.bcits.works.shared.BqlException;
 
 import com.bcits.works.shared.ApiException;
 
 import com.bcits.works.shared.EventService;
 import com.bcits.works.workitems.WorkItem;
+import com.bcits.works.workitems.WorkItemConditionExpression;
 import com.bcits.works.workitems.WorkItemRepository;
 import com.bcits.works.projects.ProjectRepository;
 import com.bcits.works.ai.AiControlPlaneService;
@@ -340,38 +342,7 @@ public class AutomationService {
      * compiles through the unified BQL layer (RB-10 §6).
      */
     static boolean conditionMatches(WorkItem item, String expr) {
-        if (expr == null || expr.isBlank()) {
-            return true;
-        }
-        for (String clause : expr.split("(?i)\\bAND\\b")) {
-            String c = clause.trim();
-            if (c.isEmpty()) {
-                continue;
-            }
-            boolean negate = c.contains("!=");
-            String[] parts = c.split("!=|=", 2);
-            if (parts.length != 2) {
-                return false;
-            }
-            String field = parts[0].trim().toLowerCase(Locale.ROOT);
-            String expected = unquote(parts[1].trim());
-            String actual = fieldValue(item, field);
-            boolean equal = actual != null && actual.equalsIgnoreCase(expected);
-            if (negate ? equal : !equal) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static String fieldValue(WorkItem item, String field) {
-        return switch (field) {
-            case "priority" -> item.getPriority();
-            case "type" -> item.getType();
-            case "status" -> item.getStatus();
-            case "assignee", "assigneeid" -> item.getAssigneeId();
-            default -> null;
-        };
+        return WorkItemConditionExpression.matches(item, expr);
     }
 
     static String normalizeTrigger(String triggerType) {
@@ -430,13 +401,6 @@ public class AutomationService {
     @SuppressWarnings("unchecked")
     private static Map<String, Object> asMap(Object o) {
         return o instanceof Map ? (Map<String, Object>) o : Map.of();
-    }
-
-    private static String unquote(String s) {
-        if (s.length() >= 2 && (s.startsWith("\"") && s.endsWith("\"") || s.startsWith("'") && s.endsWith("'"))) {
-            return s.substring(1, s.length() - 1);
-        }
-        return s;
     }
 
     private static String shortId() {

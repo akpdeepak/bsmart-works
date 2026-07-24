@@ -4,6 +4,7 @@ import com.bcits.works.workspaces.ConfigService;
 
 import com.bcits.works.shared.EventService;
 import com.bcits.works.workitems.WorkItem;
+import com.bcits.works.workitems.WorkItemConditionExpression;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -160,7 +161,7 @@ public class ExtensionExecutionService {
                 continue;
             }
 
-            if (!AutomationService.conditionMatches(item, str(ext.get("conditionExpr")))) {
+            if (!WorkItemConditionExpression.matches(item, str(ext.get("conditionExpr")))) {
                 skipped++;
                 continue;
             }

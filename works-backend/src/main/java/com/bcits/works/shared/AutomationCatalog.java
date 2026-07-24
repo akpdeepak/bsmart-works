@@ -1,4 +1,4 @@
-package com.bcits.works;
+package com.bcits.works.shared;
 
 import java.util.List;
 import java.util.Map;

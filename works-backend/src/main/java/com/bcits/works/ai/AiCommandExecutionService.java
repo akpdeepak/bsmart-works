@@ -1,6 +1,6 @@
 package com.bcits.works.ai;
 
-import com.bcits.works.AutomationCatalog;
+import com.bcits.works.shared.AutomationCatalog;
 import com.bcits.works.AutomationService;
 import com.bcits.works.messaging.Comment;
 import com.bcits.works.messaging.CommentRepository;

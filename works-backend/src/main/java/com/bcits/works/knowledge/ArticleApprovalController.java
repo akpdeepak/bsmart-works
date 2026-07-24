@@ -34,20 +34,20 @@ public class ArticleApprovalController {
     private final ArticleRepository articleRepository;
     private final KnowledgeSpaceRepository knowledgeSpaceRepository;
     private final ArticleApprovalRepository approvalRepository;
-    private final ArticleService articleService;
+    private final ArticlePublishingService articlePublishingService;
     private final RbacGate rbac;
     private final AuthenticatedUser authenticatedUser;
 
     public ArticleApprovalController(ArticleRepository articleRepository,
                                      KnowledgeSpaceRepository knowledgeSpaceRepository,
                                      ArticleApprovalRepository approvalRepository,
-                                     ArticleService articleService,
+                                     ArticlePublishingService articlePublishingService,
                                      RbacGate rbac,
                                      AuthenticatedUser authenticatedUser) {
         this.articleRepository = articleRepository;
         this.knowledgeSpaceRepository = knowledgeSpaceRepository;
         this.approvalRepository = approvalRepository;
-        this.articleService = articleService;
+        this.articlePublishingService = articlePublishingService;
         this.rbac = rbac;
         this.authenticatedUser = authenticatedUser;
     }
@@ -71,7 +71,7 @@ public class ArticleApprovalController {
             throw ApiException.badRequest("DECISION_REQUIRED", "decision is required.", "decision");
         }
         // RBAC + author-cannot-approve-own enforced inside ArticleService (RB-10 §2)
-        return articleService.approveArticle(id, userId, workspaceId, decision, comment);
+        return articlePublishingService.approveArticle(id, userId, workspaceId, decision, comment);
     }
 
     /**

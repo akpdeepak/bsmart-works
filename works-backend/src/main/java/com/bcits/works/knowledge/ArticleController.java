@@ -32,13 +32,17 @@ public class ArticleController {
     private final ArticleService articleService;
     private final ArticleQueryService articleQueryService;
     private final ArticleBulkService articleBulkService;
+    private final ArticlePublishingService articlePublishingService;
     private final AuthenticatedUser authenticatedUser;
 
     public ArticleController(ArticleService articleService, ArticleQueryService articleQueryService,
-                             ArticleBulkService articleBulkService, AuthenticatedUser authenticatedUser) {
+                             ArticleBulkService articleBulkService,
+                             ArticlePublishingService articlePublishingService,
+                             AuthenticatedUser authenticatedUser) {
         this.articleService = articleService;
         this.articleQueryService = articleQueryService;
         this.articleBulkService = articleBulkService;
+        this.articlePublishingService = articlePublishingService;
         this.authenticatedUser = authenticatedUser;
     }
 
@@ -120,27 +124,27 @@ public class ArticleController {
     // ── Publishing workflow ───────────────────────────────────────────────────
     @PutMapping("/{id}/submit")
     public Article submitForReview(@PathVariable String id) {
-        return articleService.applyTransition(id, "submit", authenticatedUser.id());
+        return articlePublishingService.applyTransition(id, "submit", authenticatedUser.id());
     }
 
     @PutMapping("/{id}/publish")
     public Article publish(@PathVariable String id) {
-        return articleService.applyTransition(id, "publish", authenticatedUser.id());
+        return articlePublishingService.applyTransition(id, "publish", authenticatedUser.id());
     }
 
     @PutMapping("/{id}/reject")
     public Article reject(@PathVariable String id) {
-        return articleService.applyTransition(id, "reject", authenticatedUser.id());
+        return articlePublishingService.applyTransition(id, "reject", authenticatedUser.id());
     }
 
     @PutMapping("/{id}/archive")
     public Article archive(@PathVariable String id) {
-        return articleService.applyTransition(id, "archive", authenticatedUser.id());
+        return articlePublishingService.applyTransition(id, "archive", authenticatedUser.id());
     }
 
     @PutMapping("/{id}/restore")
     public Article restore(@PathVariable String id) {
-        return articleService.applyTransition(id, "restore", authenticatedUser.id());
+        return articlePublishingService.applyTransition(id, "restore", authenticatedUser.id());
     }
 
     // ── KR-022: Duplicate article ─────────────────────────────────────────────
@@ -183,7 +187,7 @@ public class ArticleController {
             throw ApiException.badRequest("INVALID_DATE_FORMAT",
                     "scheduledAt must be an ISO-8601 datetime with offset.", "scheduledAt");
         }
-        return articleService.schedulePublish(id, authenticatedUser.id(), scheduledAt);
+        return articlePublishingService.schedulePublish(id, authenticatedUser.id(), scheduledAt);
     }
 
     @PostMapping("/{id}/vote")

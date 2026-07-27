@@ -49,7 +49,7 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
-    "@vitest/browser-playwright": "^4.1.8",
+    "@vitest/browser-playwright": "^4.1.10",
     "@vitest/coverage-v8": "^4.1.8",
     "axe-core": "^4.12.1",
     "eslint": "^10.5.0",

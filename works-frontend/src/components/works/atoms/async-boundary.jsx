@@ -1,6 +1,7 @@
 import { ShieldAlert, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from './empty-state';
+import { cn } from '@/lib/utils';
 
 // AsyncBoundary — unified three-state async wrapper (RB-30 §6, roadmap H2 #8).
 //
@@ -36,7 +37,12 @@ export function AsyncBoundary({
 }) {
   if (loading) {
     return (
-      <div aria-busy="true" aria-label={label} className={className}>
+      <div 
+        aria-busy="true" 
+        aria-live="polite"
+        aria-label={label} 
+        className={cn('opacity-0 motion-safe:animate-fade-in', className)}
+      >
         {skeleton}
       </div>
     );

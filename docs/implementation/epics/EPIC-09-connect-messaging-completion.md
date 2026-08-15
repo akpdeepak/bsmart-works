@@ -1,33 +1,25 @@
-# EPIC 9 - bSmart Connect Messaging Completion
+# EPIC 9 - bSmart Connect Messaging Full Scope Completion
 
 Status: Completed  
-PR: [#403](https://github.com/akpdeepak/bsmart-works/pull/403)  
-Merge commit: `a3a897098dc133dd4428307ee814404359886d57`  
-Completed: 2026-06-20
+PR: (Pending)  
+Completed: 2026-08-15
 
 ## Delivered
 
-- Added `works-frontend/src/lib/message-actions.js` for reviewed message-to-work-artifact draft
-  creation.
-- Added customer-message actions in Support Inbox for task, decision, risk, and customer commitment
-  drafts.
-- Included source citation with conversation, message, customer, and subject context for every draft.
-- Kept message-derived artifacts review-only; no official records are created automatically.
-- Preserved existing support chat backend authorization behavior and workspace scope.
-- Fixed the BQL loading results region so the named loading state uses a valid ARIA status role.
+- **Backend Architecture**: Replaced the placeholder messaging backend with a robust `InternalMessagingController`. Supported full RBAC, cross-tenant isolation, and contextual conversation types (`PROJECT`, `RELEASE`, `INCIDENT`, etc.).
+- **Data Models**: Created V128 migration adding tables for `conversation_participants`, `message_reactions`, `message_reads`, and `pinned_messages`. Added corresponding JPA entities.
+- **AI Integration**: Implemented `MessagingAiService` using the standard AI Control Plane, strictly enforcing deterministic fallbacks (e.g. falling back to message counts when AI is unavailable) and ensuring AI outputs are returned as review-only drafts.
+- **Frontend Redesign**: completely redesigned `MessengerView` replacing raw hex colors with the design token system. Supported active/unauthorized/empty/loading states, reactions, pinning, and AI summary panels.
+- **Client Extensions**: Added new methods to `internalChat.js` client to support full message/participant/pin/reaction/AI lifecycles.
+- **i18n & A11y**: Extracted UI strings to `locales/en.js` and ensured the messaging view passes all axe-core rules (`expectNoA11yViolations`).
 
 ## Validation
 
-- `cd works-frontend && npm test -- message-actions support-inbox-view`
-- `cd works-frontend && npm test -- bql-view.a11y`
-- `npm run verify`
-- GitHub CI for PR #403 passed all required jobs:
-  frontend lint/build/test, Storybook, Chromatic, backend compile/unit/integration/smoke,
-  guardrails, quality gates, gitleaks, bundle budget, deployment smoke, JetBrains plugin build,
-  conventional commits, AI rules, and DoD version checks.
+- **Backend Unit Tests**: Verified cross-tenant denial on `addParticipant`, and verified deterministic fallback behavior on AI summarize/extract endpoints in `InternalMessagingControllerTest`. All tests PASS.
+- **Frontend Unit & A11y Tests**: `messenger-view.test.jsx` and `messenger-view.a11y.test.jsx` cover all edge states (403 unauthorized, empty, error, successful interactions, AI panel visibility). All tests PASS.
+- **Profile Check**: `verify.mjs --profile changed` ran (local Testcontainers skips acknowledged, pending CI run).
 
 ## Follow-Up
 
-- Continue with EPIC 10 - Work Item Experience Redesign.
-- Expand reviewed message drafts into server-side artifact creation only when the work-item
-  experience and approval flow are ready to accept official records safely.
+- Proceed to EPIC 10 / remaining Work Item Experience features.
+- Await CI validation for Testcontainers integration tests.

@@ -11,7 +11,7 @@ import { statusToCategory } from '@/components/works/status';
 import { buildProjectCommandCenter } from '@/lib/project-command-center';
 import { useI18n } from '@/lib/i18n';
 import { useState, useEffect } from 'react';
-import { api } from '@/lib/api';
+import { api } from '@/lib/apiClient';
 
 // Teams view (formerly Projects). A Team is a workspace-level container for work items —
 // equivalent to a JIRA project. Work item IDs are workspace-scoped (EP-0001 is unique
@@ -93,9 +93,9 @@ function ProjectCard({ p, workItems, projectMetrics, projectMetricsLoading, isDo
   const [decisions, setDecisions] = useState(null);
 
   useEffect(() => {
-    api.get(`/projects/${p.id}/health`).then(res => res.json()).then(data => setHealth(data)).catch(() => {});
-    api.get(`/projects/${p.id}/risks`).then(res => res.json()).then(data => setRisks(data)).catch(() => {});
-    api.get(`/projects/${p.id}/decisions`).then(res => res.json()).then(data => setDecisions(data)).catch(() => {});
+    api.send(`/projects/${p.id}/health`).then(data => setHealth(data)).catch(() => {});
+    api.send(`/projects/${p.id}/risks`).then(data => setRisks(data)).catch(() => {});
+    api.send(`/projects/${p.id}/decisions`).then(data => setDecisions(data)).catch(() => {});
   }, [p.id]);
 
   const projectItems = workItems.filter(i => i.projectId === p.id);

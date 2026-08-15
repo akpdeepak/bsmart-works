@@ -5,5 +5,8 @@ public enum ConversationType {
     DIRECT,
     GROUP,
     PROJECT,
-    INCIDENT
+    INCIDENT,
+    WORK_ITEM,
+    RELEASE,
+    ANNOUNCEMENT
 }

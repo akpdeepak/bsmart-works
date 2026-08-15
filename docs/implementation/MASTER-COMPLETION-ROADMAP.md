@@ -133,7 +133,7 @@ A unit is ✅ **Verified** only when **all** of the following are true:
 | 6 | Simplified navigation | Completed | ✅ Verified 2026-07-19 | built | — |
 | 7 | bSmart Today | 🟠 ~70% | ⬆️ built 2026-07-21 | **max-5 attention model now built** (`MyDayService.attentionScore` + capped `attention` list, tested); AI brief still deterministic-by-default | brief LLM wiring |
 | 8 | Smart Inbox | Completed | ✅ Verified 2026-07-19 | server action projection, exact count, durable state, sourced/fallback AI, direct source actions | — |
-| 9 | Connect Messaging | 🟠 ~70% | ⬆️ built 2026-07-21 · fixed 2026-07-23 | message→artifact conversion real (`MessageArtifactService`); **#522 resolved** — orphan phase4 `/messenger` package + tables removed (V127), EPIC-9 `internal-messaging` is the single surface; **its client was throwing on every call and now works** (tested) | conversation model |
+| 9 | Connect Messaging | ✅ 100% | ⬆️ completed 2026-08-15 | message→artifact conversion real (`MessageArtifactService`); **#522 resolved** — orphan phase4 `/messenger` package + tables removed (V127), EPIC-9 `internal-messaging` is the single surface; full scope implemented including participants, reactions, pins, and AI integration with fallback (`V128`). Frontend MessengerView completely redesigned with design tokens. | |
 | 10 | Work-item experience | Completed | ✅ Verified 2026-07-21 | core built | — |
 | 11 | Project command center | Completed | ✅ Verified 2026-07-21 | projects built | — |
 | 12 | DevSync intelligence | Completed | ✅ Verified 2026-07-21 | dev workspace built | — |

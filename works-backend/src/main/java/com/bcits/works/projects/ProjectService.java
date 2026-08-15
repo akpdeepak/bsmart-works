@@ -1,6 +1,12 @@
 package com.bcits.works.projects;
 import com.bcits.works.projects.api.Project;
 import com.bcits.works.projects.api.ProjectRepository;
+import com.bcits.works.projects.api.ProjectHealth;
+import com.bcits.works.projects.api.ProjectHealthRepository;
+import com.bcits.works.projects.api.ProjectRisk;
+import com.bcits.works.projects.api.ProjectRiskRepository;
+import com.bcits.works.projects.api.ProjectDecision;
+import com.bcits.works.projects.api.ProjectDecisionRepository;
 
 import com.bcits.works.shared.CurrentWorkspace;
 import com.bcits.works.auth.api.UserRepository;
@@ -31,6 +37,9 @@ import java.util.UUID;
 public class ProjectService {
 
     private final ProjectRepository projectRepository;
+    private final ProjectHealthRepository projectHealthRepository;
+    private final ProjectRiskRepository projectRiskRepository;
+    private final ProjectDecisionRepository projectDecisionRepository;
     private final UserRepository userRepository;
     private final EventService eventService;
     private final RbacGate rbac;
@@ -38,10 +47,17 @@ public class ProjectService {
     private final CurrentWorkspace currentWorkspace;
     private final OperatingModelGate operatingModel;
 
-    public ProjectService(ProjectRepository projectRepository, UserRepository userRepository,
+    public ProjectService(ProjectRepository projectRepository, 
+                          ProjectHealthRepository projectHealthRepository,
+                          ProjectRiskRepository projectRiskRepository,
+                          ProjectDecisionRepository projectDecisionRepository,
+                          UserRepository userRepository,
                           EventService eventService, RbacGate rbac, JdbcTemplate jdbc,
                           CurrentWorkspace currentWorkspace, OperatingModelGate operatingModel) {
         this.projectRepository = projectRepository;
+        this.projectHealthRepository = projectHealthRepository;
+        this.projectRiskRepository = projectRiskRepository;
+        this.projectDecisionRepository = projectDecisionRepository;
         this.userRepository = userRepository;
         this.eventService = eventService;
         this.rbac = rbac;
@@ -211,6 +227,61 @@ public class ProjectService {
         rbac.require(callerId, project.getWorkspaceId(), "manage_projects");
         jdbc.update("DELETE FROM project_members WHERE project_id = ? AND user_id = ?", projectId, memberId);
         return Map.of("message", "Member removed");
+    }
+
+    // ── Command Center ────────────────────────────────────────────────────────
+
+    public ProjectHealth getHealth(String callerId, String projectId) {
+        loadForMember(callerId, projectId);
+        return projectHealthRepository.findFirstByProjectIdOrderByCreatedAtDesc(projectId).orElse(null);
+    }
+
+    @Transactional
+    public ProjectHealth updateHealth(String callerId, String projectId, ProjectHealth health) {
+        Project project = loadForMember(callerId, projectId);
+        rbac.require(callerId, project.getWorkspaceId(), "manage_projects");
+        health.setId("PH-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+        health.setProjectId(projectId);
+        health.setWorkspaceId(project.getWorkspaceId());
+        health.setCreatedAt(OffsetDateTime.now());
+        health.setCreatedBy(callerId);
+        return projectHealthRepository.save(health);
+    }
+
+    public List<ProjectRisk> getRisks(String callerId, String projectId) {
+        loadForMember(callerId, projectId);
+        return projectRiskRepository.findByProjectIdOrderByCreatedAtDesc(projectId);
+    }
+
+    @Transactional
+    public ProjectRisk addRisk(String callerId, String projectId, ProjectRisk risk) {
+        Project project = loadForMember(callerId, projectId);
+        rbac.require(callerId, project.getWorkspaceId(), "manage_projects");
+        risk.setId("PR-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+        risk.setProjectId(projectId);
+        risk.setWorkspaceId(project.getWorkspaceId());
+        risk.setCreatedAt(OffsetDateTime.now());
+        risk.setCreatedBy(callerId);
+        if (risk.getStatus() == null) risk.setStatus("OPEN");
+        return projectRiskRepository.save(risk);
+    }
+
+    public List<ProjectDecision> getDecisions(String callerId, String projectId) {
+        loadForMember(callerId, projectId);
+        return projectDecisionRepository.findByProjectIdOrderByCreatedAtDesc(projectId);
+    }
+
+    @Transactional
+    public ProjectDecision addDecision(String callerId, String projectId, ProjectDecision decision) {
+        Project project = loadForMember(callerId, projectId);
+        rbac.require(callerId, project.getWorkspaceId(), "manage_projects");
+        decision.setId("PD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+        decision.setProjectId(projectId);
+        decision.setWorkspaceId(project.getWorkspaceId());
+        decision.setCreatedAt(OffsetDateTime.now());
+        decision.setCreatedBy(callerId);
+        if (decision.getStatus() == null) decision.setStatus("PROPOSED");
+        return projectDecisionRepository.save(decision);
     }
 
     private String toSlug(String raw) {

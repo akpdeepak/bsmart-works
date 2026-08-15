@@ -1,9 +1,11 @@
 import { useRef, useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { KnowledgeSpaceView } from '@/components/knowledge/KnowledgeSpaceView';
+import { KnowledgeSearchView } from '@/components/knowledge/KnowledgeSearchView';
 import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import {
-  Search, Folder, FileText, File as FileIcon, ArrowLeft, BookOpen,
-  AlertTriangle, Pencil, Eye, ChevronRight, LayoutTemplate,
-  Copy, SlidersHorizontal, Share2, CheckSquare, Square, Filter, X, Home,
+  Search, Folder, FileText, ArrowLeft,
+  AlertTriangle, Pencil, Eye, ChevronRight,
+  Copy, SlidersHorizontal, Share2, X, Home,
   ListTree, Download, Printer,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
@@ -19,21 +21,18 @@ import { PageTreeSidebar } from '@/components/knowledge/PageTreeSidebar';
 import { PresenceBar } from '@/components/works/molecules/presence-bar';
 import { SearchModeToggle } from '@/components/knowledge/SearchModeToggle';
 import { useSearchMode } from '@/hooks/use-search-mode';
-import { SearchAIAnswer } from '@/components/knowledge/SearchAIAnswer';
 import { PresenceAvatarRow } from '@/components/knowledge/PresenceAvatarRow';
 import { ArticlePropertiesPanel } from '@/components/knowledge/ArticlePropertiesPanel';
 import { ArticleReactions } from '@/components/knowledge/ArticleReactions';
 import { ArticleTags } from '@/components/knowledge/ArticleTags';
 import { StarButton } from '@/components/knowledge/StarButton';
 import { WatchButton } from '@/components/knowledge/WatchButton';
-import { FollowSpaceButton } from '@/components/knowledge/FollowSpaceButton';
-import { BulkActionBar } from '@/components/knowledge/BulkActionBar';
 import { RelatedArticles } from '@/components/knowledge/RelatedArticles';
 import { ArticleSharePopover } from '@/components/knowledge/ArticleSharePopover';
 import { useRecentArticles } from '@/hooks/use-recent-articles';
-import { onPressKey, renderMd } from '@/lib/utils';
+import { renderMd } from '@/lib/utils';
 import { blocksText, countWords } from '@/lib/doc-stats';
-import { articleText, articlePreview, articleOutline, parseArticleBlocks, safeDownloadName, downloadBlob, STATUS_CHIP } from './knowledge/knowledge-view-helpers';
+import { articleText, articleOutline, parseArticleBlocks, safeDownloadName, downloadBlob } from './knowledge/knowledge-view-helpers';
 import { downloadMarkdown } from '@/lib/export';
 import { makeAiAssist, knowledgeAi } from '@/lib/knowledge-ai';
 import { capabilityEnabled } from '@/lib/ai';
@@ -53,73 +52,7 @@ const TemplatePickerModal = lazy(() => import('@/components/knowledge/TemplatePi
 const KnowledgeRoadmapPanel = lazy(() => import('@/components/knowledge/KnowledgeRoadmapPanel').then(m => ({ default: m.KnowledgeRoadmapPanel })));
 
 // Shared article list card — used in both the space view and search results.
-// KR-038: selectable — shows a checkbox when bulkMode is true.
-function ArticleCard({ art, onClick, selected = false, onToggleSelect, bulkMode = false }) {
-  const preview = articlePreview(art);
-  const toggle = () => onToggleSelect?.(art.id);
-  const handleKeyDown = (event) => {
-    if (bulkMode && (event.key === 'Enter' || event.key === ' ')) {
-      event.preventDefault();
-      toggle();
-      return;
-    }
-    if (!bulkMode) onPressKey(event);
-  };
-  return (
-    <div
-      onClick={bulkMode ? toggle : onClick}
-      role={bulkMode ? 'checkbox' : 'button'}
-      aria-checked={bulkMode ? selected : undefined}
-      tabIndex={0}
-      onKeyDown={handleKeyDown}
-      className={`bg-white dark:bg-neutral-800 border rounded-xl p-4 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-navy-tint/40 ${
-        selected
-          ? 'border-brand-navy bg-brand-navy/5 dark:bg-brand-navy/10'
-          : 'border-neutral-200 dark:border-neutral-700 hover:border-brand-navy/40 hover:shadow-sm cursor-pointer'
-      }`}
-    >
-      <div className="flex items-start gap-3">
-        {/* KR-038: checkbox — shown in bulk mode */}
-        {bulkMode && (
-          <Button unstyled
-            type="button"
-            aria-label={selected ? `Deselect ${art.title}` : `Select ${art.title}`}
-            onClick={(e) => { e.stopPropagation(); toggle(); }}
-            className="mt-0.5 flex-shrink-0 text-neutral-400 hover:text-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
-          >
-            {selected
-              ? <CheckSquare className="h-4 w-4 text-brand-navy" aria-hidden="true" />
-              : <Square className="h-4 w-4" aria-hidden="true" />}
-          </Button>
-        )}
-        <div
-          className="flex-1 min-w-0"
-          onClick={bulkMode ? undefined : onClick}
-          role="presentation"
-        >
-          <p className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">{art.title}</p>
-          {preview && (
-            <p className="text-xs text-neutral-500 mt-0.5 line-clamp-2">{preview}</p>
-          )}
-          <div className="flex items-center gap-3 mt-2">
-            <span className="text-xs text-neutral-500">v{art.versionNumber || 1} · {art.authorName || 'Unknown'}</span>
-            {art.updatedAt && (
-              <span className="text-xs text-neutral-500">{new Date(art.updatedAt).toLocaleDateString()}</span>
-            )}
-          </div>
-        </div>
-        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded ${STATUS_CHIP[art.status] || STATUS_CHIP.DRAFT}`}>
-            {art.status || 'DRAFT'}
-          </span>
-          <span className="text-xs bg-brand-navy/10 text-brand-navy px-1.5 py-0.5 rounded font-mono">
-            {art.templateType || 'KB'}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
+
 
 /**
  * KnowledgeView — knowledge base: spaces, articles, block editor, version history,
@@ -726,236 +659,57 @@ export default function KnowledgeView({
 
             {knowledgeTab === 'search' ? (
               /* ── Search results ── */
-              <div>
-                <div className="flex items-center gap-3 mb-4 flex-wrap">
-                  <h1 className="text-xl font-bold text-brand-navy dark:text-white">Search Results</h1>
-                  <span className="text-sm text-neutral-500">
-                    {filteredSearchResults.length} result{filteredSearchResults.length !== 1 ? 's' : ''} for &ldquo;{knowledgeSearch}&rdquo;
-                  </span>
-                  {/* KR-043: filter toggle */}
-                  <Button unstyled
-                    type="button"
-                    onClick={() => setFiltersOpen((o) => !o)}
-                    aria-expanded={filtersOpen}
-                    className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${filtersOpen ? 'border-brand-navy bg-brand-navy/10 text-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-brand-navy hover:text-brand-navy'}`}
-                  >
-                    <Filter className="h-3.5 w-3.5" aria-hidden="true" />
-                    Filters
-                    {(searchStatusFilter.length > 0 || searchTypeFilter.length > 0 || searchDateFilter !== 'all') && (
-                      <span className="ml-1 h-4 w-4 flex items-center justify-center bg-brand-navy text-white rounded-full text-xs font-semibold">
-                        {searchStatusFilter.length + searchTypeFilter.length + (searchDateFilter !== 'all' ? 1 : 0)}
-                      </span>
-                    )}
-                  </Button>
-                  <Button unstyled
-                    onClick={() => { setKnowledgeTab('spaces'); setKnowledgeSearch(''); setAiAnswer(null); setSearchStatusFilter([]); setSearchTypeFilter([]); setSearchDateFilter('all'); setFiltersOpen(false); }}
-                    className="text-xs text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 ml-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
-                  >
-                    Clear
-                  </Button>
-                </div>
-
-                {/* KR-043: filter panel */}
-                {filtersOpen && (
-                  <div className="mb-4 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900/60 p-3 space-y-3">
-                    <div>
-                      <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-1.5">Status</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {STATUS_FILTERS.map((s) => (
-                          <Button unstyled
-                            key={s}
-                            type="button"
-                            onClick={() => setSearchStatusFilter((prev) =>
-                              prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
-                            )}
-                            aria-pressed={searchStatusFilter.includes(s)}
-                            className={`text-xs px-2 py-0.5 rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${searchStatusFilter.includes(s) ? 'border-brand-navy bg-brand-navy/10 text-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-500'}`}
-                          >
-                            {s}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-1.5">Template</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {TEMPLATE_TYPES.map((t) => (
-                          <Button unstyled
-                            key={t}
-                            type="button"
-                            onClick={() => setSearchTypeFilter((prev) =>
-                              prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
-                            )}
-                            aria-pressed={searchTypeFilter.includes(t)}
-                            className={`text-xs px-2 py-0.5 rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${searchTypeFilter.includes(t) ? 'border-brand-navy bg-brand-navy/10 text-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-500'}`}
-                          >
-                            {t}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-wider mb-1.5">Updated</p>
-                      <div className="flex gap-1.5">
-                        {[['all', 'All time'], ['7d', 'Last 7 days'], ['30d', 'Last 30 days']].map(([v, label]) => (
-                          <Button unstyled
-                            key={v}
-                            type="button"
-                            onClick={() => setSearchDateFilter(v)}
-                            aria-pressed={searchDateFilter === v}
-                            className={`text-xs px-2 py-0.5 rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 ${searchDateFilter === v ? 'border-brand-navy bg-brand-navy/10 text-brand-navy' : 'border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-neutral-500'}`}
-                          >
-                            {label}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* KR-044: AI answer — shown above keyword results when AI mode is active */}
-                {aiSearchBusy && (
-                  <div className="mb-4 rounded-lg border border-brand-navy-tint/30 bg-brand-navy-tint/5 p-4 animate-pulse" aria-busy="true" aria-label="AI is searching…">
-                    <div className="h-3 bg-neutral-200 dark:bg-neutral-700 rounded w-3/4 mb-2" />
-                    <div className="h-3 bg-neutral-200 dark:bg-neutral-700 rounded w-1/2" />
-                  </div>
-                )}
-                {!aiSearchBusy && aiAnswer && (
-                  <div className="mb-4 rounded-lg border border-brand-navy-tint/30 bg-brand-navy-tint/5 p-4">
-                    <SearchAIAnswer
-                      answer={aiAnswer.answer}
-                      citations={aiAnswer.citations ?? []}
-                      meta={aiAnswer.meta}
-                      onOpenArticle={openArticleById}
-                    />
-                  </div>
-                )}
-
-                {filteredSearchResults.length === 0 && !aiAnswer ? (
-                  <EmptyState icon={Search} title="No results found" subtitle={`No articles match "${knowledgeSearch}". Try different keywords or adjust filters.`} />
-                ) : (
-                  <div className="space-y-2">
-                    <BulkActionBar
-                      selectedIds={selectedIds}
-                      onArchive={handleBulkArchive}
-                      onDelete={handleBulkDelete}
-                      onClear={clearSelection}
-                      busy={bulkBusy}
-                    />
-                    {filteredSearchResults.map(art => (
-                      <ArticleCard key={art.id} art={art} onClick={() => selectArticle(art)} selected={selectedIds.has(art.id)} onToggleSelect={toggleSelect} bulkMode={bulkMode} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (selectedSpace || knowledgeTab === 'all') ? (
-              /* ── Space / All Articles ── */
-              <div>
-                <div className="flex items-center justify-between mb-5">
-                  <div className="flex items-center gap-3">
-                    {selectedSpace && (
-                      <Button unstyled
-                        onClick={() => { setSelectedSpace(null); setKnowledgeTab('spaces'); }}
-                        className="text-xs text-neutral-500 hover:text-brand-navy transition-colors flex items-center gap-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 rounded"
-                      >
-                        <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-                        Spaces
-                      </Button>
-                    )}
-                    <div>
-                      <h1 className="text-xl font-bold text-brand-navy dark:text-white">
-                        {selectedSpace ? selectedSpace.name : 'All Articles'}
-                      </h1>
-                      {selectedSpace?.description && (
-                        <p className="text-xs text-neutral-500 mt-0.5">{selectedSpace.description}</p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {/* KR-068: follow space button */}
-                    {selectedSpace && (
-                      <FollowSpaceButton
-                        spaceId={selectedSpace.id}
-                        workspaceId={workspaceId}
-                        initialFollowing={selectedSpace.following ?? false}
-                        initialCount={selectedSpace.followerCount ?? 0}
-                      />
-                    )}
-                    {selectedSpace && can('manage_projects') && (
-                      <Button unstyled
-                        onClick={() => deleteKnowledgeSpace(selectedSpace.id)}
-                        className="text-xs text-semantic-danger hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-semantic-danger/40 rounded"
-                      >
-                        Delete Space
-                      </Button>
-                    )}
-                    {selectedSpace && (
-                      <>
-                        <Button
-                          variant="secondary"
-                          onClick={() => setTemplatePickerOpen(true)}
-                          className="flex items-center gap-1.5"
-                        >
-                          <LayoutTemplate className="h-3.5 w-3.5" aria-hidden="true" />
-                          From template
-                        </Button>
-                        <Button
-                          variant="action"
-                          onClick={() => { setIsArticleFormOpen(true); setArticleForm({ title: '', content: '', templateType: 'KB', status: 'DRAFT' }); }}
-                        >
-                          + New Article
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* KR-038: bulk action bar — shown when ≥1 article is selected */}
-                <BulkActionBar
-                  selectedIds={selectedIds}
-                  onArchive={handleBulkArchive}
-                  onDelete={handleBulkDelete}
-                  onClear={clearSelection}
-                  busy={bulkBusy}
-                />
-
-                {knowledgeArticlesLoading && knowledgeArticles.length === 0 ? (
-                  <AsyncBoundary
-                    loading
-                    label="Loading articles"
-                    className="space-y-2"
-                    skeleton={[0, 1, 2, 3].map(i => <div key={i} className="h-20 rounded-xl animate-pulse bg-neutral-100 dark:bg-neutral-800" />)}
-                  />
-                ) : knowledgeArticles.length === 0 ? (
-                  <AsyncBoundary
-                    empty
-                    emptyIcon={FileIcon}
-                    emptyTitle={selectedSpace ? `No articles in ${selectedSpace.name}` : 'No articles'}
-                    emptySubtitle="Create your first article to capture knowledge for the team."
-                    emptyAction={selectedSpace && (
-                      <Button variant="action" onClick={() => setIsArticleFormOpen(true)}>Write Article</Button>
-                    )}
-                  />
-                ) : (
-                  <div className="space-y-2">
-                    {knowledgeArticles.map(art => (
-                      <ArticleCard
-                        key={art.id}
-                        art={art}
-                        onClick={() => selectArticle(art)}
-                        selected={selectedIds.has(art.id)}
-                        onToggleSelect={toggleSelect}
-                        bulkMode={bulkMode}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
+              <KnowledgeSearchView
+                filteredSearchResults={filteredSearchResults}
+                knowledgeSearch={knowledgeSearch}
+                filtersOpen={filtersOpen}
+                setFiltersOpen={setFiltersOpen}
+                searchStatusFilter={searchStatusFilter}
+                setSearchStatusFilter={setSearchStatusFilter}
+                searchTypeFilter={searchTypeFilter}
+                setSearchTypeFilter={setSearchTypeFilter}
+                searchDateFilter={searchDateFilter}
+                setSearchDateFilter={setSearchDateFilter}
+                setKnowledgeTab={setKnowledgeTab}
+                setKnowledgeSearch={setKnowledgeSearch}
+                setAiAnswer={setAiAnswer}
+                aiSearchBusy={aiSearchBusy}
+                aiAnswer={aiAnswer}
+                openArticleById={openArticleById}
+                selectedIds={selectedIds}
+                handleBulkArchive={handleBulkArchive}
+                handleBulkDelete={handleBulkDelete}
+                clearSelection={clearSelection}
+                bulkBusy={bulkBusy}
+                selectArticle={selectArticle}
+                toggleSelect={toggleSelect}
+                bulkMode={bulkMode}
+                STATUS_FILTERS={STATUS_FILTERS}
+                TEMPLATE_TYPES={TEMPLATE_TYPES}
+              />
             ) : (
-              <EmptyState
-                icon={BookOpen}
-                title="Select a space"
-                subtitle="Choose a knowledge space from the left sidebar to browse articles, or search for specific content."
+              /* ── Space / All Articles ── */
+              <KnowledgeSpaceView
+                selectedSpace={selectedSpace}
+                knowledgeTab={knowledgeTab}
+                setSelectedSpace={setSelectedSpace}
+                setKnowledgeTab={setKnowledgeTab}
+                workspaceId={workspaceId}
+                canManageProjects={can('manage_projects')}
+                deleteKnowledgeSpace={deleteKnowledgeSpace}
+                setTemplatePickerOpen={setTemplatePickerOpen}
+                setIsArticleFormOpen={setIsArticleFormOpen}
+                setArticleForm={setArticleForm}
+                selectedIds={selectedIds}
+                handleBulkArchive={handleBulkArchive}
+                handleBulkDelete={handleBulkDelete}
+                clearSelection={clearSelection}
+                bulkBusy={bulkBusy}
+                knowledgeArticlesLoading={knowledgeArticlesLoading}
+                knowledgeArticles={knowledgeArticles}
+                selectArticle={selectArticle}
+                toggleSelect={toggleSelect}
+                bulkMode={bulkMode}
               />
             )}
           </div>

@@ -104,7 +104,8 @@ class WorkItemTrashRouteTest {
             authenticatedUser, mock(WorkItemBulkService.class), readService, commandService,
             mock(WorkItemEngagementService.class));
 
-    WorkItemTrashRouteTest() {
+    @org.junit.jupiter.api.BeforeEach
+    public void setUp() {
         when(authenticatedUser.id()).thenReturn(CALLER);
     }
 

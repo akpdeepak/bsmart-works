@@ -98,7 +98,8 @@ class WorkItemControllerAccessTest {
             authenticatedUser, mock(WorkItemBulkService.class), readService, commandService,
             engagementService);
 
-    WorkItemControllerAccessTest() {
+    @org.junit.jupiter.api.BeforeEach
+    public void setUp() {
         when(authenticatedUser.id()).thenReturn(CALLER);
     }
 

@@ -60,7 +60,8 @@ class ProjectControllerAccessTest {
 
     private final ProjectController controller = new ProjectController(projectService, authenticatedUser);
 
-    ProjectControllerAccessTest() {
+    @org.junit.jupiter.api.BeforeEach
+    public void setUp() {
         when(authenticatedUser.id()).thenReturn(CALLER);
         doThrow(ApiException.forbidden("denied")).when(rbac).require(eq(CALLER), eq(FOREIGN_WS), eq(PERM));
     }

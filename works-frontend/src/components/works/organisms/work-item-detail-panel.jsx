@@ -126,14 +126,49 @@ export function WorkItemDetailPanel({
                 <Bot className="h-3.5 w-3.5 text-brand-navy dark:text-brand-navy-tint" aria-hidden="true" />
                 Execution brief
               </p>
-              <p className="mt-1 text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                {executionBrief.summary}
-              </p>
+              <div className="mt-1 text-sm font-medium text-neutral-900 dark:text-neutral-100 flex items-center gap-1.5 flex-wrap">
+                <span>{executionBrief.key} is</span>
+                <select 
+                  className="bg-transparent border-none p-0 cursor-pointer text-brand-navy underline decoration-brand-navy/30 underline-offset-4 focus:ring-0 appearance-none font-semibold"
+                  value={selectedItem.status || ''}
+                  onChange={(e) => handleUpdateItem(selectedItem.id, { status: e.target.value })}
+                >
+                  <option value="Backlog">Backlog</option>
+                  <option value="To Do">To Do</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="In Review">In Review</option>
+                  <option value="Done">Done</option>
+                  <option value="Closed">Closed</option>
+                </select>
+                <span>with</span>
+                <select 
+                  className="bg-transparent border-none p-0 cursor-pointer text-brand-navy underline decoration-brand-navy/30 underline-offset-4 focus:ring-0 appearance-none font-semibold"
+                  value={selectedItem.priority || ''}
+                  onChange={(e) => handleUpdateItem(selectedItem.id, { priority: e.target.value })}
+                >
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                  <option value="Critical">Critical</option>
+                </select>
+                <span>priority, owned by</span>
+                <select 
+                  className="bg-transparent border-none p-0 cursor-pointer text-brand-navy underline decoration-brand-navy/30 underline-offset-4 focus:ring-0 appearance-none font-semibold max-w-[150px] truncate"
+                  value={selectedItem.assigneeId || ''}
+                  onChange={(e) => handleUpdateItem(selectedItem.id, { assigneeId: e.target.value })}
+                >
+                  <option value="">Unassigned</option>
+                  {users.map(u => (
+                    <option key={u.id} value={u.id}>{u.fullName || u.email}</option>
+                  ))}
+                </select>
+                <span>, due {executionBrief.dueDate}.</span>
+              </div>
               <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
                 Sources: {executionBrief.citations.join(', ')}
               </p>
             </div>
-            <div className="grid gap-2 sm:grid-cols-3">
+            <div className="grid gap-2 sm:grid-cols-4">
               <div className="rounded-md border border-neutral-200 bg-white px-3 py-2 dark:border-neutral-700 dark:bg-neutral-800">
                 <p className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 dark:text-neutral-400">
                   <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
@@ -154,6 +189,13 @@ export function WorkItemDetailPanel({
                   DevSync
                 </p>
                 <p className="mt-0.5 truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">{executionBrief.devSync}</p>
+              </div>
+              <div className="rounded-md border border-neutral-200 bg-white px-3 py-2 dark:border-neutral-700 dark:bg-neutral-800 border-l-2 border-l-semantic-warning">
+                <p className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                  <ShieldCheck className="h-3.5 w-3.5 text-semantic-warning" aria-hidden="true" />
+                  SLA (Epic 18)
+                </p>
+                <p className="mt-0.5 truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">{executionBrief.sla}</p>
               </div>
             </div>
           </div>

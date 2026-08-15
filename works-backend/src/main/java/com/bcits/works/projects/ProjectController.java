@@ -1,5 +1,8 @@
 package com.bcits.works.projects;
 import com.bcits.works.projects.api.Project;
+import com.bcits.works.projects.api.ProjectHealth;
+import com.bcits.works.projects.api.ProjectRisk;
+import com.bcits.works.projects.api.ProjectDecision;
 
 import com.bcits.works.shared.AuthenticatedUser;
 
@@ -84,5 +87,37 @@ public class ProjectController {
     public ResponseEntity<Void> deleteProject(@PathVariable String id) {
         projectService.delete(authenticatedUser.id(), id);
         return ResponseEntity.noContent().build();
+    }
+
+    // ── Command Center Endpoints ───────────────────────────────────────────────
+
+    @GetMapping("/{id}/health")
+    public ProjectHealth getHealth(@PathVariable String id) {
+        return projectService.getHealth(authenticatedUser.id(), id);
+    }
+
+    @PostMapping("/{id}/health")
+    public ProjectHealth updateHealth(@PathVariable String id, @Valid @RequestBody ProjectHealth health) {
+        return projectService.updateHealth(authenticatedUser.id(), id, health);
+    }
+
+    @GetMapping("/{id}/risks")
+    public List<ProjectRisk> getRisks(@PathVariable String id) {
+        return projectService.getRisks(authenticatedUser.id(), id);
+    }
+
+    @PostMapping("/{id}/risks")
+    public ProjectRisk addRisk(@PathVariable String id, @Valid @RequestBody ProjectRisk risk) {
+        return projectService.addRisk(authenticatedUser.id(), id, risk);
+    }
+
+    @GetMapping("/{id}/decisions")
+    public List<ProjectDecision> getDecisions(@PathVariable String id) {
+        return projectService.getDecisions(authenticatedUser.id(), id);
+    }
+
+    @PostMapping("/{id}/decisions")
+    public ProjectDecision addDecision(@PathVariable String id, @Valid @RequestBody ProjectDecision decision) {
+        return projectService.addDecision(authenticatedUser.id(), id, decision);
     }
 }

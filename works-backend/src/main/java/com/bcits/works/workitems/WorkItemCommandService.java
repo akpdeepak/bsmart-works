@@ -13,6 +13,7 @@ import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.EventService;
 import com.bcits.works.shared.RbacGate;
+import com.bcits.works.projects.ProjectSequenceService;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -48,6 +49,7 @@ public class WorkItemCommandService {
     private final ObjectMapper objectMapper;
     private final TeamSequenceGenerator teamSequenceGenerator;
     private final WorkItemNotifier notifier;
+    private final ProjectSequenceService projectSequenceService;
 
     public WorkItemCommandService(WorkItemRepository repository, EventService eventService,
                                   JdbcTemplate jdbc,
@@ -57,7 +59,8 @@ public class WorkItemCommandService {
                                   BoardWipLimitService wipLimits,
                                   AutomationService automations, FunnelService funnelService,
                                   WorkItemReadService readService, ObjectMapper objectMapper,
-                                  TeamSequenceGenerator teamSequenceGenerator, WorkItemNotifier notifier) {
+                                  TeamSequenceGenerator teamSequenceGenerator, WorkItemNotifier notifier,
+                                  ProjectSequenceService projectSequenceService) {
         this.repository = repository;
         this.eventService = eventService;
         this.jdbc = jdbc;
@@ -74,6 +77,7 @@ public class WorkItemCommandService {
         this.objectMapper = objectMapper;
         this.teamSequenceGenerator = teamSequenceGenerator;
         this.notifier = notifier;
+        this.projectSequenceService = projectSequenceService;
     }
 
     public WorkItem restoreFromTrash(String id) {
@@ -129,15 +133,13 @@ public class WorkItemCommandService {
             int seq = teamSequenceGenerator.getNextSequence(teamId);
             newItem.setAutoId(teamKey + "-" + seq);
         } else {
-            // Fallback to old behavior (type-based counter)
-            String autoIdPrefix = DefaultWorkItemTypes.prefixFor(newItem.getType());
-            Long counter = jdbc.queryForObject(
-                "INSERT INTO work_item_counters (workspace_id, type_key, next_val) VALUES (?, ?, 1) "
-                    + "ON CONFLICT (workspace_id, type_key) DO UPDATE "
-                    + "  SET next_val = work_item_counters.next_val + 1 "
-                    + "RETURNING next_val",
-                Long.class, effectiveWsId, newItem.getType().toUpperCase());
-            newItem.setAutoId(autoIdPrefix + "-" + String.format("%04d", counter));
+            if (newItem.getProjectId() != null) {
+                newItem.setAutoId(projectSequenceService.generateNextKey(newItem.getProjectId()));
+            } else {
+                Long counter = jdbc.queryForObject("SELECT nextval('work_item_sequence')", Long.class);
+                String autoIdPrefix = DefaultWorkItemTypes.prefixFor(newItem.getType());
+                newItem.setAutoId(autoIdPrefix + "-" + String.format("%04d", counter));
+            }
         }
 
         String initialStatus = statusConfig.initialStatus(effectiveWsId, newItem.getType());

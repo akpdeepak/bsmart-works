@@ -1,6 +1,6 @@
 # EPIC 9 - bSmart Connect Messaging Full Scope
 
-Status: Completed  
+Status: Completed
 Branch: `feat/gh-epic9-full-scope`  
 Roadmap: V.20
 
@@ -38,3 +38,4 @@ scope extends the base support chat to comprehensive internal messaging across m
 - Frontend test coverage for `messenger-view.test.jsx` (state coverage) and `messenger-view.a11y.test.jsx` (axe accessibility).
 - End-to-end integration via changed-profile test pipeline (including `verify.mjs --profile changed`).
 - Storybook coverage for `MessengerView` states.
+

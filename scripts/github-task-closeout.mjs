@@ -85,6 +85,10 @@ async function recordMerged(pr) {
   const evidence = extractJsonMarker(pr.body ?? '', 'bsmart-pr-evidence');
   if (!evidence) return;
   const issueNumber = taskNumber(evidence);
+  if (!issueNumber || issueNumber === 0) {
+    console.warn(`Invalid issue number extracted: ${issueNumber}`);
+    return;
+  }
   const prior = await latestTaskState(issueNumber);
   if (['MERGED', 'MAIN_VERIFIED', 'DONE'].includes(prior?.state)) return;
   await postState(issueNumber, completionState(pr, evidence, prior, 'MERGED', 'Wait for successful CI on main'));
@@ -93,6 +97,10 @@ async function recordMainVerified(pr, mainSha) {
   const evidence = extractJsonMarker(pr.body ?? '', 'bsmart-pr-evidence');
   if (!evidence) return;
   const issueNumber = taskNumber(evidence);
+  if (!issueNumber || issueNumber === 0) {
+    console.warn(`Invalid issue number extracted: ${issueNumber}`);
+    return;
+  }
   let prior = await latestTaskState(issueNumber);
   if (!prior || prior.state === 'DONE') return;
   if (prior.state !== 'MERGED') {

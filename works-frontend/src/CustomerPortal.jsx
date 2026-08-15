@@ -209,7 +209,12 @@ export default function CustomerPortal() {
 
   if (!session) return <LoginScreen onLogin={setSession} />;
 
-  const logout = () => { localStorage.removeItem(PORTAL_KEY); setSession(null); };
+  const logout = () => {
+    pApi().post('/portal/auth/logout').finally(() => {
+      localStorage.removeItem(PORTAL_KEY);
+      setSession(null);
+    });
+  };
 
   const go = (next) => {
     setView(next);

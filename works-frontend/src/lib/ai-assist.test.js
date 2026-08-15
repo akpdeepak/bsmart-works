@@ -59,8 +59,8 @@ describe('aiAssistClient.suggestDescription', () => {
     expect(res.result).toBe('A suggested description');
     expect(res.fallback).toBe(false);
     expect(api.send).toHaveBeenCalledWith(
-      expect.stringContaining('/ai/assist/suggest-description'),
-      expect.objectContaining({ method: 'POST', body: { title: 'Fix bug', type: 'BUG' } })
+      expect.stringContaining('/ai/generate'),
+      expect.objectContaining({ body: { prompt: 'Suggest description for BUG: Fix bug' } })
     );
   });
 

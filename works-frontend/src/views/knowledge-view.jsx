@@ -111,6 +111,7 @@ export default function KnowledgeView({
   workspaceId,
   aiCapabilities = [],
   currentUser,
+  projects,
 }) {
   const aiGenEnabled = capabilityEnabled(aiCapabilities, 'generation');
   const aiAssist = makeAiAssist(workspaceId, aiGenEnabled);
@@ -943,6 +944,7 @@ export default function KnowledgeView({
                         blocks={blocks}
                         articleTitle={selectedArticle.title}
                         workspaceId={workspaceId}
+                        projects={projects}
                         onBlocksChange={(updated) => {
                           const json = JSON.stringify(updated);
                           setSelectedArticle(a => ({ ...a, contentBlocks: json }));

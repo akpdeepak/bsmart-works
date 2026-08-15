@@ -47,6 +47,9 @@ export const api = {
   async send(path, opts = {}) {
     const res = await apiRaw(path, opts);
     if (!res.ok) {
+      if (res.status === 401) {
+        window.dispatchEvent(new Event('auth-expired'));
+      }
       const err = await res.json().catch(() => ({ message: `HTTP ${res.status}` }));
       const message = err.message || err.error || `Request failed: ${res.status}`;
       const apiError = new Error(message);
@@ -55,6 +58,16 @@ export const api = {
       apiError.status = res.status;
       throw apiError;
     }
-    return res.json();
+    
+    // P0-01: Correctly handle No Content/Reset Content to prevent JSON parse errors
+    if (res.status === 204 || res.status === 205) return null;
+    
+    const text = await res.text();
+    if (!text) return null;
+    
+    if ((res.headers.get('content-type') || '').includes('application/json')) {
+      return JSON.parse(text);
+    }
+    return text;
   },
 };

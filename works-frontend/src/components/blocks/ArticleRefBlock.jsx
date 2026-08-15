@@ -52,7 +52,7 @@ export function ArticleRefBlock({ block, onChange, editMode, workspaceId }) {
   const runSearch = useCallback((q) => {
     if (!q.trim() || !workspaceId) { setResults([]); setDropdownOpen(false); return; }
     setSearching(true);
-    api.send(`/articles?q=${encodeURIComponent(q)}&workspaceId=${encodeURIComponent(workspaceId)}`)
+    api.send(`/articles/search?q=${encodeURIComponent(q)}&workspaceId=${encodeURIComponent(workspaceId)}`)
       .then((data) => {
         const list = Array.isArray(data) ? data : (data?.content ?? []);
         setResults(list.slice(0, 10));

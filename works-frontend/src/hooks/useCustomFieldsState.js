@@ -56,7 +56,13 @@ export function useCustomFieldsState(api, activeWorkspaceId, showToast, reportEr
   }
 
   function fetchFieldLayouts() {
-    api.raw(`/field-layouts`).then(r => r.json()).then(d => setFieldLayouts(Array.isArray(d) ? d : [])).catch(reportError);
+    api.raw(`/field-layouts?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
+      .then(r => r.json())
+      .then(d => {
+        const arr = Array.isArray(d) ? d : [];
+        setFieldLayouts(arr.map(fl => ({ ...fl, layout: fl.layoutJson || fl.layout })));
+      })
+      .catch(reportError);
   }
 
   function fetchFieldVisibility() {

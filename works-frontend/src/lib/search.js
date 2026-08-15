@@ -14,15 +14,15 @@ export const searchClient = {
 
     const [wiResult, articleResult] = await Promise.allSettled([
       types.includes('work_items')
-        ? api.send(`/work-items?${wiParams}`)
-        : Promise.resolve({ content: [], totalElements: 0 }),
+        ? api.send(`/work-items/search?workspaceId=${encodeURIComponent(workspaceId)}&q=${encodeURIComponent(query)}&page=${page}&size=${size}`)
+        : Promise.resolve([]),
       types.includes('articles')
-        ? api.send(`/knowledge/search?workspaceId=${encodeURIComponent(workspaceId)}&q=${encodeURIComponent(query)}&page=${page}&size=${size}`)
-        : Promise.resolve({ content: [], totalElements: 0 }),
+        ? api.send(`/articles/search?workspaceId=${encodeURIComponent(workspaceId)}&q=${encodeURIComponent(query)}&page=${page}&size=${size}`)
+        : Promise.resolve([]),
     ]);
 
-    const workItems = wiResult.status === 'fulfilled' ? (wiResult.value?.content ?? []) : [];
-    const articles  = articleResult.status === 'fulfilled' ? (articleResult.value?.content ?? []) : [];
+    const workItems = wiResult.status === 'fulfilled' ? (Array.isArray(wiResult.value) ? wiResult.value : (wiResult.value?.content ?? [])) : [];
+    const articles  = articleResult.status === 'fulfilled' ? (Array.isArray(articleResult.value) ? articleResult.value : (articleResult.value?.content ?? [])) : [];
 
     return { workItems, articles, total: workItems.length + articles.length };
   },

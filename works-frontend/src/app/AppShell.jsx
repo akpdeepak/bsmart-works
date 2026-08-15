@@ -602,7 +602,7 @@ export default function AppShell() {
   function fetchAll() {
     setLoading(true);
     Promise.all([
-      api.raw(`/work-items`).then(r => {
+      api.raw(`/work-items?workspaceId=${encodeURIComponent(activeWorkspaceId)}`).then(r => {
         // Read X-Total-Count before consuming the body — headers are only available on the
         // Response object, not after .json() resolves (Audit Finding #7).
         const total = r.headers.get('X-Total-Count');
@@ -745,16 +745,26 @@ export default function AppShell() {
     }).catch(() => setMfaSetupMsg('Confirmation failed'));
   };
 
+  useEffect(() => {
+    const onAuthExpired = () => handleLogout();
+    window.addEventListener('auth-expired', onAuthExpired);
+    return () => window.removeEventListener('auth-expired', onAuthExpired);
+  }, []);
+
   const handleLogout = () => {
-    setCurrentUser(null); setToken(null);
-    localStorage.removeItem('bSmartSession');
-    localStorage.removeItem('bSmartActiveWorkspace');
+    api.send('/auth/logout', { method: 'POST' }).finally(() => {
+      setCurrentUser(null); setToken(null);
+      localStorage.removeItem('bSmartSession');
+      localStorage.removeItem('bSmartActiveWorkspace');
+      window.location.href = '/login';
+    });
   };
 
   // WORK ITEMS
   const handleCreate = (formData) => {
     if (!formData.title || formData.title.length < 3) { showToast('Title must be at least 3 characters', 'error'); return; }
-    const projectId = formData.projectId || (projects.length > 0 ? projects[0].id : 'PROJ-WORKS');
+    const projectId = formData.projectId || (projects.length > 0 ? projects[0].id : null);
+    if (!projectId) { showToast('A project must be selected to create an item.', 'error'); return; }
     api.send(`/work-items`, {
       method: 'POST',
       body: JSON.stringify({
@@ -776,7 +786,8 @@ export default function AppShell() {
   // Inline quick-add (WI-13): promise-returning variant for the backlog quick-add row; resolves with
   // the saved item so the row can reset itself. Project defaults to the first available project.
   const handleInlineCreate = ({ title, type, priority = 'MEDIUM' }) => {
-    const projectId = projects.length > 0 ? projects[0].id : 'PROJ-WORKS';
+    const projectId = projects.length > 0 ? projects[0].id : null;
+    if (!projectId) return Promise.reject(new Error('No project available in this workspace.'));
     return api.send('/work-items', {
       method: 'POST',
       body: JSON.stringify({ title, type, priority, projectId }),
@@ -990,13 +1001,14 @@ export default function AppShell() {
   }
 
   // SPRINT FUNCTIONS
-  function fetchSprints(projectId = 'PROJ-WORKS') {
+  function fetchSprints(projectId = projects.length > 0 ? projects[0].id : null) {
+    if (!projectId) { setSprints([]); setActiveSprint(null); return; }
     api.raw(`/sprints?projectId=${projectId}`)
       .then(r => r.json()).then(d => {
         const list = Array.isArray(d) ? d : [];
         setSprints(list);
         const active = list.find(s => s.status === 'ACTIVE') || list[0];
-        if (active) { setActiveSprint(active); fetchSprintItems(active.id); fetchSprintMetrics(active, 'PROJ-WORKS'); }
+        if (active) { setActiveSprint(active); fetchSprintItems(active.id); fetchSprintMetrics(active, projectId); }
       }).catch(reportError);
   }
   function fetchSprintItems(sprintId) {
@@ -1004,7 +1016,7 @@ export default function AppShell() {
       .then(r => r.json()).then(d => setSprintItems(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function fetchBacklog() {
-    api.raw(`/work-items/backlog`)
+    api.raw(`/work-items/backlog?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
       .then(r => r.json()).then(d => setBacklogItems(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function fetchSprintReport(sprintId) {
@@ -1184,8 +1196,12 @@ export default function AppShell() {
 
 
   function togglePermission(roleId, permission, currentlyGranted) {
-    api.send(`/permission-schemes/permissions`, {
-      method: 'POST', body: JSON.stringify({ roleId, permission, granted: !currentlyGranted })
+    const roleRow = permMatrix.find(r => r.role.id === roleId);
+    if (!roleRow) return;
+    const updatedPermissionsMap = { ...roleRow.permissions, [permission]: !currentlyGranted };
+    const nextPerms = Object.keys(updatedPermissionsMap).filter(k => updatedPermissionsMap[k]);
+    api.send(`/permission-schemes/roles/${encodeURIComponent(roleId)}/permissions`, {
+      method: 'PUT', body: JSON.stringify(nextPerms)
     }).then(() => { showToast('Permission updated'); fetchPermMatrix(); })
       .catch(() => showToast('Failed to update permission', 'error'));
   }
@@ -1413,7 +1429,9 @@ export default function AppShell() {
   }
 
   const handleCreateSprint = () => {
-    api.raw(`/sprints`, { method: 'POST', body: JSON.stringify({ ...newSprint, projectId: 'PROJ-WORKS' }) })
+    const projectId = projects.length > 0 ? projects[0].id : null;
+    if (!projectId) { showToast('A project must be available to create a sprint.', 'error'); return; }
+    api.raw(`/sprints`, { method: 'POST', body: JSON.stringify({ ...newSprint, projectId }) })
       .then(r => r.json()).then(s => {
         setSprints(prev => [s, ...prev]);
         setNewSprint({ name: '', goal: '', startDate: '', endDate: '', capacity: 40 });

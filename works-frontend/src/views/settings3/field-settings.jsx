@@ -151,7 +151,7 @@ export function FieldLayoutSettings({
                       const entry = orderedFields.find(e => e.fieldDefId === fid);
                       return { fieldDefId: fid, visible: entry ? entry.visible !== false : true };
                     });
-                    api.send(`/field-layouts`, { method: 'PUT', body: JSON.stringify({ itemType, layout, workspaceId: activeWorkspaceId }) })
+                    api.send(`/field-layouts/${itemType}?workspaceId=${encodeURIComponent(activeWorkspaceId)}`, { method: 'PUT', body: JSON.stringify({ layoutJson: layout }) })
                       .then(() => { showToast('Layout saved'); fetchFieldLayouts(); }).catch(() => showToast('Failed', 'error'));
                   }}>Save Layout</Button>
                 </div>

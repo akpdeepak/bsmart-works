@@ -15,6 +15,14 @@
 
 <!-- Human-readable summary. Exact AC/test mappings belong in the JSON evidence block below. -->
 
+## TDD
+
+<!-- TDD must be applicable or include a reason, e.g.:
+TDD: applicable — tests added: ...
+OR
+TDD: not applicable — reason: ...
+-->
+
 <!-- bsmart-pr-evidence
 {
   "protocol": "bsmart-pr/v1",

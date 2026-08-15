@@ -64,7 +64,7 @@ export function validatePrEvidence(evidence) {
   const failures = [];
   if (evidence?.protocol !== 'bsmart-pr/v1') failures.push('protocol must be bsmart-pr/v1');
   if (!TASK.test(evidence?.task ?? '')) failures.push('task must use GH-<number>');
-  if (!/^https:\/\/github\.com\/.+\/issues\/\d+$/.test(evidence?.planUrl ?? '')) {
+  if (!/^https:\/\/github\.com\/[^\/]+\/[^\/]+\/(issues|pull|discussions)\/\d+$/i.test(evidence?.planUrl ?? '')) {
     failures.push('planUrl must link to the GitHub task');
   }
 

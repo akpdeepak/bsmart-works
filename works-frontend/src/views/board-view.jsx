@@ -65,7 +65,7 @@ function dueLabel(dateStr, t) {
 }
 
 export default function BoardView({
-  workItems,
+  workItems, fetchAll,
   loading,
   density,
   wipLimits,
@@ -276,6 +276,15 @@ export default function BoardView({
                 {`(${t('deliver.board.showing')} ${workItems.length} ${t('deliver.board.of')} ${totalWorkItemCount})`}
               </span>
             )}
+            {totalWorkItemCount !== null && totalWorkItemCount > workItems.length && (
+              <button
+                onClick={() => fetchAll(Math.ceil(workItems.length / 200), 200)}
+                className="ml-2 text-xs font-medium text-brand-navy hover:underline focus:outline-none"
+              >
+                Load More
+              </button>
+            )}
+
           </p>
         </div>
         <div className="flex items-center gap-2">

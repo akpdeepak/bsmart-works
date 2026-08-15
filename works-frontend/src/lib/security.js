@@ -22,7 +22,7 @@ export const securityClient = {
   updatePolicy: (workspaceId, id, body) =>
     api.send(`/security/conditional-access/${id}?workspaceId=${ws(workspaceId)}`, { method: 'PUT', body }),
   deletePolicy: (workspaceId, id) =>
-    api.raw(`/security/conditional-access/${id}?workspaceId=${ws(workspaceId)}`, { method: 'DELETE' }),
+    api.send(`/security/conditional-access/${id}?workspaceId=${ws(workspaceId)}`, { method: 'DELETE' }),
   evaluate: (workspaceId, { role, ip, country, deviceTrusted }) =>
     api.send(`/security/conditional-access/evaluate?workspaceId=${ws(workspaceId)}`
       + `&role=${q(role)}&ip=${q(ip)}&country=${q(country)}&deviceTrusted=${!!deviceTrusted}`),
@@ -39,7 +39,7 @@ export const securityClient = {
   createStream: (workspaceId, body) =>
     api.send(`/security/streams?workspaceId=${ws(workspaceId)}`, { method: 'POST', body }),
   deleteStream: (workspaceId, id) =>
-    api.raw(`/security/streams/${id}?workspaceId=${ws(workspaceId)}`, { method: 'DELETE' }),
+    api.send(`/security/streams/${id}?workspaceId=${ws(workspaceId)}`, { method: 'DELETE' }),
 
   // ── Access anomalies ────────────────────────────────────────────────────────
   anomalies: (workspaceId, status = '') =>
@@ -73,7 +73,7 @@ export const securityClient = {
   beginRegisterPasskey: () => api.send(`/auth/passkeys/register/begin`, { method: 'POST' }),
   finishRegisterPasskey: (body) =>
     api.send(`/auth/passkeys/register/finish`, { method: 'POST', body }),
-  deletePasskey: (id) => api.raw(`/auth/passkeys/${id}`, { method: 'DELETE' }),
+  deletePasskey: (id) => api.send(`/auth/passkeys/${id}`, { method: 'DELETE' }),
 
   // ── Passwordless passkey sign-in (pre-auth) ─────────────────────────────────
   beginAuthenticatePasskey: (email) =>

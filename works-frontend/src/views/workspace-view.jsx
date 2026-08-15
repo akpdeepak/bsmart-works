@@ -86,10 +86,10 @@ export default function WorkspaceView({
                           ? <RoleBadge role={m.role || userRole.role} tier={userRole.tier} />
                           : <select defaultValue={m.role || 'MEMBER'}
                               onChange={e => {
-                                api.raw(`/rbac/members/${m.id}/role`, {
+                                api.send(`/rbac/members/${m.id}/role`, {
                                   method: 'PUT',
                                   body: JSON.stringify({ roleId: e.target.value, workspaceId: activeWorkspaceId })
-                                }).then(r => r.json()).then(d => showToast(d.message || 'Role updated'))
+                                }).then(d => showToast(d.message || 'Role updated'))
                                   .catch(err => showToast(err.message, 'error'));
                               }}
                               className="text-xs border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-200 rounded px-2 py-1 focus:outline-none text-neutral-700">

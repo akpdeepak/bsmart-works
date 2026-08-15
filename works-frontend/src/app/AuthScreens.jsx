@@ -51,7 +51,7 @@ export function AuthScreens({ api, onLogin, showToast }) {
       if (authForm.password !== confirmPassword) { setAuthError('Passwords do not match.'); return; }
       if (authForm.password.length < 8) { setAuthError('Password must be at least 8 characters.'); return; }
     }
-    api.raw(`/auth${authMode === 'login' ? '/login' : '/signup'}`, {
+    api.send(`/auth${authMode === 'login' ? '/login' : '/signup'}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(authForm)
     }).then(async res => {
@@ -94,7 +94,7 @@ export function AuthScreens({ api, onLogin, showToast }) {
   };
 
   const handleVerifyEmail = (token) => {
-    api.raw(`/auth/verify?token=${token}`)
+    api.send(`/auth/verify?token=${token}`)
       .then(async res => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || data.error || 'Verification failed');
@@ -109,7 +109,7 @@ export function AuthScreens({ api, onLogin, showToast }) {
 
   const handleMfaVerify = () => {
     setMfaError('');
-    api.raw(`/auth/mfa/verify`, {
+    api.send(`/auth/mfa/verify`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId: mfaChallenge.userId, totp: mfaCode })
     }).then(async res => {
@@ -124,10 +124,10 @@ export function AuthScreens({ api, onLogin, showToast }) {
 
   const handleForgotPassword = (e) => {
     e.preventDefault();
-    api.raw(`/auth/forgot-password`, {
+    api.send(`/auth/forgot-password`, {
       method: 'POST',
       body: JSON.stringify({ email: forgotEmail })
-    }).then(r => r.json()).then(d => setForgotMsg(d.message)).catch(() => setForgotMsg('Error. Please try again.'));
+    }).then(d => setForgotMsg(d.message)).catch(() => setForgotMsg('Error. Please try again.'));
   };
 
   const handleResetPassword = (token, newPassword) =>
@@ -327,24 +327,7 @@ export function AuthScreens({ api, onLogin, showToast }) {
         )}
         {authMode === 'login' && (
           <div className="mt-5">
-            <div className="flex items-center gap-3">
-              <span className="h-px flex-1 bg-neutral-200 dark:bg-neutral-700" />
-              <span className="text-xs text-neutral-400">or continue with</span>
-              <span className="h-px flex-1 bg-neutral-200 dark:bg-neutral-700" />
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              {['Google', 'Microsoft'].map((p) => (
-                <button key={p} type="button" disabled title="Single sign-on is coming soon"
-                  className="cursor-not-allowed rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-700 opacity-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
-                  {p}
-                </button>
-              ))}
-            </div>
-            <button type="button" disabled title="Single sign-on is coming soon"
-              className="mt-3 w-full cursor-not-allowed rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-700 opacity-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
-              Sign in with SAML SSO
-            </button>
-            <p className="mt-2 text-center text-xs text-neutral-400">Single sign-on is coming soon — use your work email for now.</p>
+
           </div>
         )}
         <div className="mt-6 text-center text-sm text-neutral-600 dark:text-neutral-400">

@@ -49,29 +49,47 @@ public class WorkItemReadService {
         return items;
     }
 
-    public ResponseEntity<List<WorkItem>> getAllWorkItems(String parentId, int page, int size) {
+    static final String WORKSPACE_PROJECTS =
+            "project_id IN (SELECT p.id FROM projects p "
+                    + "JOIN workspace_members wm ON wm.workspace_id = p.workspace_id WHERE wm.user_id = ? AND p.workspace_id = ?)";
+
+    public ResponseEntity<List<WorkItem>> getAllWorkItems(String workspaceId, String projectId, String parentId, int page, int size) {
         String userId = authenticatedUser.id();
         int limit = Math.min(Math.max(size, 1), 500);
         int offset = Math.max(page, 0) * limit;
         List<WorkItem> items;
         long totalCount;
+        String projectFilter = projectId != null ? " AND project_id = ? " : "";
+        
         if (parentId != null) {
-            items = jdbc.query("SELECT * FROM work_items WHERE parent_id = ? AND deleted_at IS NULL "
-                            + "AND " + MEMBER_PROJECTS + " ORDER BY created_at DESC LIMIT ? OFFSET ?",
-                    this::mapRow, parentId, userId, limit, offset);
-            Long cnt = jdbc.queryForObject(
-                    "SELECT COUNT(*) FROM work_items WHERE parent_id = ? AND deleted_at IS NULL "
-                            + "AND " + MEMBER_PROJECTS,
-                    Long.class, parentId, userId);
-            totalCount = cnt != null ? cnt : 0L;
+            String sql = "SELECT * FROM work_items WHERE parent_id = ? AND deleted_at IS NULL "
+                    + "AND " + WORKSPACE_PROJECTS + projectFilter + " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+            String countSql = "SELECT COUNT(*) FROM work_items WHERE parent_id = ? AND deleted_at IS NULL "
+                    + "AND " + WORKSPACE_PROJECTS + projectFilter;
+            
+            if (projectId != null) {
+                items = jdbc.query(sql, this::mapRow, parentId, userId, workspaceId, projectId, limit, offset);
+                Long cnt = jdbc.queryForObject(countSql, Long.class, parentId, userId, workspaceId, projectId);
+                totalCount = cnt != null ? cnt : 0L;
+            } else {
+                items = jdbc.query(sql, this::mapRow, parentId, userId, workspaceId, limit, offset);
+                Long cnt = jdbc.queryForObject(countSql, Long.class, parentId, userId, workspaceId);
+                totalCount = cnt != null ? cnt : 0L;
+            }
         } else {
-            items = jdbc.query("SELECT * FROM work_items WHERE deleted_at IS NULL "
-                            + "AND " + MEMBER_PROJECTS + " ORDER BY created_at DESC LIMIT ? OFFSET ?",
-                    this::mapRow, userId, limit, offset);
-            Long cnt = jdbc.queryForObject(
-                    "SELECT COUNT(*) FROM work_items WHERE deleted_at IS NULL AND " + MEMBER_PROJECTS,
-                    Long.class, userId);
-            totalCount = cnt != null ? cnt : 0L;
+            String sql = "SELECT * FROM work_items WHERE deleted_at IS NULL "
+                    + "AND " + WORKSPACE_PROJECTS + projectFilter + " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+            String countSql = "SELECT COUNT(*) FROM work_items WHERE deleted_at IS NULL AND " + WORKSPACE_PROJECTS + projectFilter;
+            
+            if (projectId != null) {
+                items = jdbc.query(sql, this::mapRow, userId, workspaceId, projectId, limit, offset);
+                Long cnt = jdbc.queryForObject(countSql, Long.class, userId, workspaceId, projectId);
+                totalCount = cnt != null ? cnt : 0L;
+            } else {
+                items = jdbc.query(sql, this::mapRow, userId, workspaceId, limit, offset);
+                Long cnt = jdbc.queryForObject(countSql, Long.class, userId, workspaceId);
+                totalCount = cnt != null ? cnt : 0L;
+            }
         }
         attachTagsBatch(items);
         attachFieldValuesBatch(items);
@@ -151,15 +169,15 @@ public class WorkItemReadService {
         return items;
     }
 
-    public List<WorkItem> getBacklog(String projectId, int size) {
+    public List<WorkItem> getBacklog(String workspaceId, String projectId, int size) {
         String userId = authenticatedUser.id();
         int limit = Math.min(Math.max(size, 1), 1000);
-        String sql = "SELECT * FROM work_items WHERE sprint_id IS NULL AND " + MEMBER_PROJECTS
+        String sql = "SELECT * FROM work_items WHERE sprint_id IS NULL AND " + WORKSPACE_PROJECTS
                 + (projectId != null ? " AND project_id = ?" : "")
                 + " ORDER BY backlog_order ASC, created_at ASC LIMIT " + limit;
         return projectId != null
-                ? jdbc.query(sql, this::mapRow, userId, projectId)
-                : jdbc.query(sql, this::mapRow, userId);
+                ? jdbc.query(sql, this::mapRow, userId, workspaceId, projectId)
+                : jdbc.query(sql, this::mapRow, userId, workspaceId);
     }
 
     public void reorderBacklog(List<Map<String, Object>> items) {

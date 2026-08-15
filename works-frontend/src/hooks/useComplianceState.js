@@ -23,27 +23,27 @@ export function useComplianceState(api, workspaceId, showToast, reportError) {
 
   function fetchComplianceRules() {
     if (!workspaceId) return;
-    api.raw(`/compliance/rules?workspaceId=${encodeURIComponent(workspaceId)}`).then(r => r.json())
+    api.send(`/compliance/rules?workspaceId=${encodeURIComponent(workspaceId)}`)
       .then(d => setComplianceRules(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function fetchComplianceTemplates() {
-    api.raw(`/compliance/rules/templates`).then(r => r.json())
+    api.send(`/compliance/rules/templates`)
       .then(d => setComplianceTemplates(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function fetchComplianceViolations(status = violationFilter) {
     if (!workspaceId) return;
     const qs = status ? `&status=${encodeURIComponent(status)}` : '';
-    api.raw(`/compliance/violations?workspaceId=${encodeURIComponent(workspaceId)}${qs}`).then(r => r.json())
+    api.send(`/compliance/violations?workspaceId=${encodeURIComponent(workspaceId)}${qs}`)
       .then(d => { setComplianceViolations(Array.isArray(d) ? d : []); setSelectedViolations([]); }).catch(reportError);
   }
   function fetchComplianceDashboard() {
     if (!workspaceId) return;
-    api.raw(`/compliance/dashboard?workspaceId=${encodeURIComponent(workspaceId)}`).then(r => r.json())
+    api.send(`/compliance/dashboard?workspaceId=${encodeURIComponent(workspaceId)}`)
       .then(d => setComplianceDashboard(d)).catch(reportError);
   }
   function fetchComplianceAudit() {
     if (!workspaceId) return;
-    api.raw(`/compliance/audit?workspaceId=${encodeURIComponent(workspaceId)}`).then(r => r.json())
+    api.send(`/compliance/audit?workspaceId=${encodeURIComponent(workspaceId)}`)
       .then(d => setComplianceAudit(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
@@ -153,7 +153,7 @@ export function useComplianceState(api, workspaceId, showToast, reportError) {
 
   function exportComplianceAudit() {
     if (!workspaceId) return;
-    api.raw(`/compliance/audit/export?workspaceId=${encodeURIComponent(workspaceId)}`)
+    api.send(`/compliance/audit/export?workspaceId=${encodeURIComponent(workspaceId)}`)
       .then(r => r.blob())
       .then(blob => {
         const url = URL.createObjectURL(blob);

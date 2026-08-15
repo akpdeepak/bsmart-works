@@ -5,10 +5,11 @@ import { api } from '@/lib/apiClient';
 
 // Mock the single apiClient surface (RB-10 §1 — one HTTP path). The component fetches the
 // token-scoped public endpoint; we drive its three states through this mock.
-vi.mock('@/lib/apiClient', () => ({ api: { raw: vi.fn() } }));
+vi.mock('@/lib/apiClient', () => ({ api: { send: vi.fn(), raw: vi.fn() } }));
 
 function mockResponse(body, ok = true) {
-  return Promise.resolve({ ok, json: () => Promise.resolve(body) });
+  if (!ok) return Promise.reject(new Error('Dashboard unavailable'));
+  return Promise.resolve(body);
 }
 
 const SAMPLE = {
@@ -29,11 +30,11 @@ describe('PublicDashboardEmbed', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('fetches the token-scoped public endpoint and renders the widgets', async () => {
-    api.raw.mockReturnValue(mockResponse(SAMPLE));
+    api.send.mockReturnValue(mockResponse(SAMPLE));
 
     render(<PublicDashboardEmbed token="abc123" />);
 
-    await waitFor(() => expect(api.raw).toHaveBeenCalledWith('/public/dashboards/abc123'));
+    await waitFor(() => expect(api.send).toHaveBeenCalledWith('/public/dashboards/abc123'));
     // Both widget titles render from the mocked token response.
     expect(await screen.findByText('Open items')).toBeInTheDocument();
     expect(screen.getByText('By status')).toBeInTheDocument();
@@ -43,7 +44,7 @@ describe('PublicDashboardEmbed', () => {
   });
 
   it('renders a PIVOT widget from the server-resolved pivots — no "no workspace" error (embed gap fix)', async () => {
-    api.raw.mockReturnValue(mockResponse(SAMPLE));
+    api.send.mockReturnValue(mockResponse(SAMPLE));
 
     render(<PublicDashboardEmbed token="abc123" embedded />);
 
@@ -56,11 +57,11 @@ describe('PublicDashboardEmbed', () => {
   });
 
   it('renders chrome-less when embedded — no header chrome, name only for screen readers', async () => {
-    api.raw.mockReturnValue(mockResponse(SAMPLE));
+    api.send.mockReturnValue(mockResponse(SAMPLE));
 
     render(<PublicDashboardEmbed token="abc123" embedded />);
 
-    await waitFor(() => expect(api.raw).toHaveBeenCalled());
+    await waitFor(() => expect(api.send).toHaveBeenCalled());
     // Widgets still render…
     expect(await screen.findByText('Open items')).toBeInTheDocument();
     // …but the visible "Read-only" chrome badge is gone (embedded host owns the frame).
@@ -70,7 +71,7 @@ describe('PublicDashboardEmbed', () => {
   });
 
   it('shows the error state for an invalid / revoked token', async () => {
-    api.raw.mockReturnValue(mockResponse({}, false));
+    api.send.mockReturnValue(mockResponse({}, false));
 
     render(<PublicDashboardEmbed token="revoked" />);
 
@@ -79,7 +80,7 @@ describe('PublicDashboardEmbed', () => {
   });
 
   it('shows the empty state when the dashboard has no widgets', async () => {
-    api.raw.mockReturnValue(mockResponse({ ...SAMPLE, widgets: [] }));
+    api.send.mockReturnValue(mockResponse({ ...SAMPLE, widgets: [] }));
 
     render(<PublicDashboardEmbed token="abc123" />);
 

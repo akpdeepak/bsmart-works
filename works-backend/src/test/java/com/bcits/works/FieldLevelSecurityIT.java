@@ -428,7 +428,7 @@ class FieldLevelSecurityIT {
     void listPath_redactsHiddenField_forLowTier() {
         actAs(USER_LOW);
 
-        List<WorkItem> items = readService.getAllWorkItems(null, 0, 100).getBody();
+        List<WorkItem> items = readService.getAllWorkItems(WS, null, null, 0, 100).getBody();
         WorkItem seeded = items.stream().filter(w -> ITEM.equals(w.getId())).findFirst().orElseThrow();
 
         assertThat(seeded.getFieldValues())

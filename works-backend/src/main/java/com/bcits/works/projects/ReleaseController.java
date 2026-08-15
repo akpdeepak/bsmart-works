@@ -52,7 +52,11 @@ public class ReleaseController {
 
     @GetMapping("/{id}")
     public Release getRelease(@PathVariable String id) {
-        Release release = releaseRepository.findById(id).orElseThrow();
+        return getReleaseOrNotFound(id);
+    }
+
+    private Release getReleaseOrNotFound(String id) {
+        Release release = releaseRepository.findById(id).orElseThrow(() -> ApiException.notFound("Release", id));
         String wsId = rbac.workspaceForProject(release.getProjectId());
         if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
             throw ApiException.notFound("Release", id);
@@ -86,6 +90,7 @@ public class ReleaseController {
         if (wsId == null || rbac.getUserTier(userId, wsId) < 1) {
             throw ApiException.notFound("Project", release.getProjectId());
         }
+        rbac.require(userId, wsId, "manage_projects");
         release.setId("REL-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         release.setStatus(release.getStatus() != null ? release.getStatus() : "PLANNED");
         release.setCreatedBy(userId);
@@ -99,11 +104,9 @@ public class ReleaseController {
     @PutMapping("/{id}")
     public Release updateRelease(@PathVariable String id, @Valid @RequestBody Release updated) {
         String userId = authenticatedUser.id();
-        Release existing = releaseRepository.findById(id).orElseThrow(() -> ApiException.notFound("Release", id));
+        Release existing = getReleaseOrNotFound(id);
         String wsId = rbac.workspaceForProject(existing.getProjectId());
-        if (wsId == null || rbac.getUserTier(userId, wsId) < 1) {
-            throw ApiException.notFound("Release", id);
-        }
+        rbac.require(userId, wsId, "manage_projects");
         return releaseRepository.findById(id).map(r -> {
             r.setName(updated.getName());
             r.setDescription(updated.getDescription());
@@ -129,6 +132,7 @@ public class ReleaseController {
         if (wsId == null || rbac.getUserTier(userId, wsId) < 1) {
             throw ApiException.notFound("Release", id);
         }
+        rbac.require(userId, wsId, "manage_projects");
         // The item must live in the release's workspace — never associate another tenant's item (RB-40 §1).
         if (!wsId.equals(rbac.workspaceForWorkItem(workItemId))) throw ApiException.notFound("Work item", workItemId);
         jdbc.update("INSERT INTO work_item_releases (work_item_id, release_id, created_at) VALUES (?, ?, NOW()) " +
@@ -144,17 +148,16 @@ public class ReleaseController {
         if (wsId == null || rbac.getUserTier(userId, wsId) < 1) {
             throw ApiException.notFound("Release", id);
         }
+        rbac.require(userId, wsId, "manage_projects");
         jdbc.update("DELETE FROM work_item_releases WHERE work_item_id = ? AND release_id = ?", workItemId, id);
         return Map.of("message", "Item removed from release");
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteRelease(@PathVariable String id) {
-        Release existing = releaseRepository.findById(id).orElseThrow(() -> ApiException.notFound("Release", id));
+        Release existing = getReleaseOrNotFound(id);
         String wsId = rbac.workspaceForProject(existing.getProjectId());
-        if (wsId == null || rbac.getUserTier(authenticatedUser.id(), wsId) < 1) {
-            throw ApiException.notFound("Release", id);
-        }
+        rbac.require(authenticatedUser.id(), wsId, "manage_projects");
         releaseRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }

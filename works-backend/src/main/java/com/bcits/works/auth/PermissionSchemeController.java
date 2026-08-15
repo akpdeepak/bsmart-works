@@ -102,7 +102,7 @@ public class PermissionSchemeController {
     @PutMapping("/{id}")
     public PermissionScheme update(@PathVariable String id, @Valid @RequestBody PermissionScheme updated) {
         PermissionScheme existing = schemeRepo.findById(id).orElseThrow();
-        rbac.require(authenticatedUser.id(), existing.getWorkspaceId(), "view_items");
+        rbac.require(authenticatedUser.id(), existing.getWorkspaceId(), "manage_permissions");
         return schemeRepo.findById(id).map(s -> {
             s.setName(updated.getName());
             s.setDescription(updated.getDescription());
@@ -142,7 +142,7 @@ public class PermissionSchemeController {
     @PutMapping("/roles/{id}")
     public RoleDef updateRole(@PathVariable String id, @Valid @RequestBody RoleDef updated) {
         RoleDef existingRole = roleDefRepo.findById(id).orElseThrow();
-        rbac.require(authenticatedUser.id(), existingRole.getWorkspaceId(), "view_items");
+        rbac.require(authenticatedUser.id(), existingRole.getWorkspaceId(), "manage_permissions");
         return roleDefRepo.findById(id).map(r -> {
             r.setName(updated.getName());
             r.setDescription(updated.getDescription());

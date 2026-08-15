@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   Activity, Bell, BellRing, Check, ChevronDown, Code, Eye, Keyboard,
   ListTodo, PanelLeft, Search, Settings, User, X,
@@ -175,6 +175,7 @@ export default function AppShell() {
   const [sprints, setSprints]           = useState([]);
   const [activeSprint, setActiveSprint] = useState(null);
   const [backlogItems, setBacklogItems] = useState([]);
+  const [totalBacklogCount, setTotalBacklogCount] = useState(0);
   const [sprintItems, setSprintItems]   = useState([]);
   const [sprintReport, setSprintReport] = useState(null);
   const [savedFilters, setSavedFilters] = useState([]);
@@ -375,10 +376,10 @@ export default function AppShell() {
     setTagInput((selectedItem.tags || []).join(', '));
     setActivityEventFilter('');
     const h = headers();
-    api.raw(`/work-items/${id}/comments`, { headers: h }).then(r => r.json()).then(d => setComments(Array.isArray(d) ? d : [])).catch(reportError);
-    api.raw(`/work-items/${id}/activity`, { headers: h }).then(r => r.json()).then(d => setActivity(Array.isArray(d) ? d : [])).catch(reportError);
-    api.raw(`/work-items/${id}/links`, { headers: h }).then(r => r.json()).then(d => setLinks(Array.isArray(d) ? d : [])).catch(reportError);
-    api.raw(`/work-items/${id}/attachments`, { headers: h }).then(r => r.json()).then(d => setAttachments(Array.isArray(d) ? d : [])).catch(reportError);
+    api.send(`/work-items/${id}/comments`, { headers: h }).then(d => setComments(Array.isArray(d) ? d : [])).catch(reportError);
+    api.send(`/work-items/${id}/activity`, { headers: h }).then(d => setActivity(Array.isArray(d) ? d : [])).catch(reportError);
+    api.send(`/work-items/${id}/links`, { headers: h }).then(d => setLinks(Array.isArray(d) ? d : [])).catch(reportError);
+    api.send(`/work-items/${id}/attachments`, { headers: h }).then(d => setAttachments(Array.isArray(d) ? d : [])).catch(reportError);
     fetchStatusDurations(id); // Iteration 7 (Cap B) — auto time-in-status, projected from the event log
     setDetailTab('details');
     if (fieldDefs.length > 0) fetchFieldValues(id);
@@ -414,16 +415,21 @@ export default function AppShell() {
       return updated;
     });
     // Load children
-    api.raw(`/work-items?parentId=${selectedItem.id}`)
-      .then(r => r.json())
+    api.send(`/work-items?parentId=${selectedItem.id}`)
+      
       .then(d => setItemChildren((Array.isArray(d) ? d : []).filter(i => i.parentId === selectedItem.id)))
       .catch(() => setItemChildren([]));
   }, [selectedItem?.id]);
 
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
-  };
+  const toastTimerRef = useRef(null);
+  const showToast = useCallback((message, type = 'success', timeout = 4000) => {
+    const id = Date.now();
+    setToast({ message, type, id });
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    if (timeout > 0) {
+      toastTimerRef.current = setTimeout(() => setToast(prev => (prev?.id === id ? null : prev)), timeout);
+    }
+  }, []);
   setToastEmitter(showToast); // register the live emitter for reportError (lib/report-error.js)
 
   const {
@@ -557,18 +563,25 @@ export default function AppShell() {
     }
   }, [roleLoaded, view, userRole.tier, userRole.surfaces]);
 
-  // Switching tenant persists the choice and reloads so every workspace-scoped query refetches
-  // cleanly under the new workspace — no stale cross-tenant data in this large single-file app.
+  // Switching tenant persists the choice and reloads context data
   const switchWorkspace = (id) => {
     if (id === activeWorkspaceId) { setWsOpen(false); return; }
     if (!selectWorkspace(id)) return;
     setWsOpen(false);
-    window.location.reload();
+    
+    // Soft reload of workspace-bound global state
+    queryClient.invalidateQueries();
+    setRoleLoaded(false);
+    fetchUserRole();
+    fetchProjects(id);
+    fetchAll(0, 200);
+    fetchReleases();
+    fetchTeams();
   };
 
   function fetchUserRole() {
-    api.raw(`/rbac/me?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
-      .then(r => r.json()).then(d => setUserRole({
+    api.send(`/rbac/me?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
+      .then(d => setUserRole({
         role: d.role || 'MEMBER',
         tier: d.tier || 2,
         permissions: Array.isArray(d.permissions) ? d.permissions : [],
@@ -599,20 +612,24 @@ export default function AppShell() {
       .catch(err => showToast(err.message, 'error'));
   };
 
-  function fetchAll() {
+  function fetchAll(page = 0, size = 200) {
     setLoading(true);
     Promise.all([
-      api.raw(`/work-items?workspaceId=${encodeURIComponent(activeWorkspaceId)}`).then(r => {
+      api.raw(`/work-items?workspaceId=${encodeURIComponent(activeWorkspaceId)}&page=${page}&size=${size}`).then(async r => {
         // Read X-Total-Count before consuming the body — headers are only available on the
         // Response object, not after .json() resolves (Audit Finding #7).
         const total = r.headers.get('X-Total-Count');
         if (total !== null) setTotalWorkItemCount(Number(total));
-        return r.json();
+        if (!r.ok) {
+           if (r.status === 401) window.dispatchEvent(new Event('auth-expired'));
+           throw new Error('fetch failed');
+        }
+        return await r.json();
       }),
-      api.raw(`/projects`).then(r => r.json()),
-      api.raw(`/users?workspaceId=${encodeURIComponent(activeWorkspaceId)}`).then(r => r.json()),
+      api.send(`/projects`),
+      api.send(`/users?workspaceId=${encodeURIComponent(activeWorkspaceId)}`),
     ]).then(([items, projs, usrs]) => {
-      setWorkItems(Array.isArray(items) ? items : []);
+      setWorkItems(prev => page === 0 ? (Array.isArray(items) ? items : []) : [...prev, ...(Array.isArray(items) ? items : [])]);
       setProjects(Array.isArray(projs) ? projs : []);
       setUsers(Array.isArray(usrs) ? usrs : []);
       setLoading(false);
@@ -730,16 +747,16 @@ export default function AppShell() {
   // MFA enroll/confirm act on the logged-in user; apiClient attaches the JWT, and the server
   // derives identity from it (no client-supplied X-User-Id — that header is no longer trusted).
   const handleMfaEnroll = () => {
-    api.raw(`/auth/mfa/enroll`, { method: 'POST' })
-      .then(r => r.json()).then(d => { setMfaSetup(d); setMfaSetupCode(''); setMfaSetupMsg(''); })
+    api.send(`/auth/mfa/enroll`, { method: 'POST' })
+      .then(d => { setMfaSetup(d); setMfaSetupCode(''); setMfaSetupMsg(''); })
       .catch(() => showToast('MFA enroll failed', 'error'));
   };
 
   const handleMfaConfirm = () => {
-    api.raw(`/auth/mfa/confirm`, {
+    api.send(`/auth/mfa/confirm`, {
       method: 'POST',
       body: JSON.stringify({ totp: mfaSetupCode })
-    }).then(r => r.json()).then(d => {
+    }).then(d => {
       if (d.message) { setMfaSetup(null); setMfaSetupMsg(''); showToast('MFA enabled!'); }
       else setMfaSetupMsg(d.message || d.error || 'Failed');
     }).catch(() => setMfaSetupMsg('Confirmation failed'));
@@ -751,13 +768,17 @@ export default function AppShell() {
     return () => window.removeEventListener('auth-expired', onAuthExpired);
   }, []);
 
-  const handleLogout = () => {
-    api.send('/auth/logout', { method: 'POST' }).finally(() => {
+  const handleLogout = async () => {
+    try {
+      await api.send('/auth/logout', { method: 'POST' });
+    } catch (e) {
+      // Best effort; proceed to local clearing even if network fails
+    } finally {
       setCurrentUser(null); setToken(null);
       localStorage.removeItem('bSmartSession');
       localStorage.removeItem('bSmartActiveWorkspace');
       window.location.href = '/login';
-    });
+    }
   };
 
   // WORK ITEMS
@@ -803,7 +824,7 @@ export default function AppShell() {
   // reflects the change and surface a summary toast. Returns a promise so the caller can clear state.
   const handleBulkEdit = (action, value, ids) =>
     api.send('/work-items/bulk', { method: 'POST', body: JSON.stringify({ ids, action, value }) })
-      .then(res => api.raw('/work-items').then(r => r.json()).then(items => {
+      .then(res => api.send('/work-items').then(items => {
         setWorkItems(Array.isArray(items) ? items : []);
         const updated = res?.updated?.length ?? 0;
         const skipped = res?.skipped?.length ?? 0;
@@ -821,13 +842,17 @@ export default function AppShell() {
     if (selectedItem?.id === id) setSelectedItem(null);
     setDeleteUndoItem(item);
     clearTimeout(deleteUndoTimer.current);
-    // Toast with undo — commit delete after 8 seconds
-    setToast({ message: `"${item.title.slice(0, 35)}${item.title.length > 35 ? '…' : ''}" deleted`, type: 'undo' });
+    
+    // Immediate server soft-delete (P1-12)
+    api.send(`/work-items/${id}`, { method: 'DELETE' }).catch(() => {
+      setWorkItems(prev => [...prev, item]);
+      showToast('Failed to delete item', 'error');
+      setDeleteUndoItem(null);
+    });
+
+    // Toast with undo — stays for 8 seconds
+    setToast({ message: `"${item.title.slice(0, 35)}${item.title.length > 35 ? '…' : ''}" deleted`, type: 'undo', id: Date.now() });
     deleteUndoTimer.current = setTimeout(() => {
-      api.send(`/work-items/${id}`, { method: 'DELETE' }).catch(() => {
-        setWorkItems(prev => [...prev, item]);
-        showToast('Failed to delete item', 'error');
-      });
       setDeleteUndoItem(null);
       setToast(null);
     }, 8000);
@@ -836,10 +861,16 @@ export default function AppShell() {
   const handleUndoDelete = () => {
     if (!deleteUndoItem) return;
     clearTimeout(deleteUndoTimer.current);
-    setWorkItems(prev => {
-      const exists = prev.find(i => i.id === deleteUndoItem.id);
-      return exists ? prev : [...prev, deleteUndoItem];
-    });
+    
+    api.send(`/work-items/${deleteUndoItem.id}/restore`, { method: 'PUT' }).then(() => {
+      setWorkItems(prev => {
+        const exists = prev.find(i => i.id === deleteUndoItem.id);
+        if (exists) return prev;
+        return [...prev, deleteUndoItem];
+      });
+      showToast('Item restored');
+    }).catch(err => showToast(err.message || 'Failed to restore', 'error'));
+
     setDeleteUndoItem(null);
     setToast(null);
   };
@@ -871,7 +902,7 @@ export default function AppShell() {
     }).catch(err => {
       if (err?.status === 409) {
         // Concurrent edit: pull the authoritative item instead of leaving the stale optimistic move.
-        api.raw(`/work-items/${itemId}`).then(r => (r.ok ? r.json() : null)).then(fresh => {
+        api.send(`/work-items/${itemId}`).then(fresh => {
           setWorkItems(prev => prev.map(i => i.id === itemId ? (fresh || { ...i, status: item.status }) : i));
         }).catch(() => setWorkItems(prev => prev.map(i => i.id === itemId ? { ...i, status: item.status } : i)));
         showToast('This item changed elsewhere — refreshed to the latest', 'error');
@@ -894,23 +925,39 @@ export default function AppShell() {
   const handleUpdateItem = (updated) => {
     clearTimeout(updateTimerRef.current);
     updateTimerRef.current = setTimeout(() => {
+      if (!navigator.onLine) {
+        queueDraft(updated);
+        showToast('Saved offline. Will sync when reconnected.', 'info');
+        return;
+      }
       api.send(`/work-items/${updated.id}`, {
         method: 'PUT',
         body: JSON.stringify({ ...updated, tags: updated.tags || [] })
       }).then(saved => {
         setWorkItems(prev => prev.map(i => i.id === saved.id ? saved : i));
         setSelectedItem(saved);
-      }).catch(err => showToast(err.message, 'error'));
+      }).catch(err => {
+        if (err.message === 'Failed to fetch') {
+          queueDraft(updated);
+          showToast('Network error: Edit queued locally.', 'info');
+          return;
+        }
+        if (err.status === 409) {
+          showToast('Conflict: This item was modified elsewhere. Please refresh to merge changes.', 'error', 0); // 0 means don't auto-dismiss
+          return;
+        }
+        showToast(err.message, 'error');
+      });
     }, 600);
   };
 
   // COMMENTS with @mention + internal flag
   const handleAddComment = () => {
     if (!newComment.trim()) return;
-    api.raw(`/work-items/${selectedItem.id}/comments`, {
+    api.send(`/work-items/${selectedItem.id}/comments`, {
       method: 'POST',
       body: JSON.stringify({ body: newComment, isInternal: commentInternal })
-    }).then(r => r.json()).then(c => {
+    }).then(c => {
       setComments(prev => [...prev, c]);
       setNewComment(''); setCommentInternal(false); setMentionOpen(false);
     });
@@ -947,8 +994,8 @@ export default function AppShell() {
 
   // WORKSPACE
   const fetchMembers = () => {
-    api.raw(`/workspaces/${activeWorkspaceId}/members`)
-      .then(r => r.json()).then(d => setWorkspaceMembers(Array.isArray(d) ? d : [])).catch(reportError);
+    api.send(`/workspaces/${activeWorkspaceId}/members`)
+      .then(d => setWorkspaceMembers(Array.isArray(d) ? d : [])).catch(reportError);
   };
 
   const handleInvite = () => {
@@ -959,14 +1006,14 @@ export default function AppShell() {
   };
 
   const handleRemoveMember = (userId) => {
-    api.raw(`/workspaces/${activeWorkspaceId}/members/${userId}`, { method: 'DELETE', headers: headers() })
+    api.send(`/workspaces/${activeWorkspaceId}/members/${userId}`, { method: 'DELETE', headers: headers() })
       .then(() => fetchMembers());
   };
 
   // NOTIFICATION PREFS
   function fetchNotifPrefs() {
-    api.raw(`/notification-preferences`)
-      .then(r => r.json()).then(d => setNotifPrefs({
+    api.send(`/notification-preferences`)
+      .then(d => setNotifPrefs({
         notifyAssign:  d.notify_assign  ?? true,
         notifyComment: d.notify_comment ?? true,
         notifyMention: d.notify_mention ?? true,
@@ -974,13 +1021,13 @@ export default function AppShell() {
       })).catch(reportError);
   }
   function saveNotifPrefs(prefs) {
-    api.raw(`/notification-preferences`, { method: 'PUT', body: JSON.stringify(prefs) })
+    api.send(`/notification-preferences`, { method: 'PUT', body: JSON.stringify(prefs) })
       .then(() => setNotifPrefs(prefs));
   }
 
   function fetchUserPrefs() {
-    api.raw(`/users/me/preferences`)
-      .then(r => r.json())
+    api.send(`/users/me/preferences`)
+      
       .then(d => {
         setUserPrefs(d);
         if (d && d.theme === 'dark') setDarkMode(true);
@@ -990,8 +1037,8 @@ export default function AppShell() {
   }
 
   function saveUserPrefs(prefs) {
-    api.raw(`/users/me/preferences`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(prefs) })
-      .then(r => r.json())
+    api.send(`/users/me/preferences`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(prefs) })
+      
       .then(d => {
         setUserPrefs(d);
         if (d && d.theme === 'dark') setDarkMode(true);
@@ -1003,8 +1050,8 @@ export default function AppShell() {
   // SPRINT FUNCTIONS
   function fetchSprints(projectId = projects.length > 0 ? projects[0].id : null) {
     if (!projectId) { setSprints([]); setActiveSprint(null); return; }
-    api.raw(`/sprints?projectId=${projectId}`)
-      .then(r => r.json()).then(d => {
+    api.send(`/sprints?projectId=${projectId}`)
+      .then(d => {
         const list = Array.isArray(d) ? d : [];
         setSprints(list);
         const active = list.find(s => s.status === 'ACTIVE') || list[0];
@@ -1012,27 +1059,39 @@ export default function AppShell() {
       }).catch(reportError);
   }
   function fetchSprintItems(sprintId) {
-    api.raw(`/sprints/${sprintId}/items`)
-      .then(r => r.json()).then(d => setSprintItems(Array.isArray(d) ? d : [])).catch(reportError);
+    api.send(`/sprints/${sprintId}/items`)
+      .then(d => setSprintItems(Array.isArray(d) ? d : [])).catch(reportError);
   }
-  function fetchBacklog() {
-    api.raw(`/work-items/backlog?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
-      .then(r => r.json()).then(d => setBacklogItems(Array.isArray(d) ? d : [])).catch(reportError);
+  function fetchBacklog(page = 0, size = 200) {
+    api.raw(`/work-items/backlog?workspaceId=${encodeURIComponent(activeWorkspaceId)}&page=${page}&size=${size}`)
+      .then(async r => {
+        const total = r.headers.get('X-Total-Count');
+        if (total !== null) setTotalBacklogCount(Number(total));
+        if (!r.ok) {
+           if (r.status === 401) window.dispatchEvent(new Event('auth-expired'));
+           throw new Error('fetch failed');
+        }
+        return await r.json();
+      })
+      .then(d => {
+        const list = Array.isArray(d) ? d : [];
+        setBacklogItems(prev => page === 0 ? list : [...prev, ...list]);
+      }).catch(reportError);
   }
   function fetchSprintReport(sprintId) {
-    api.raw(`/sprints/${sprintId}/report`)
-      .then(r => r.json()).then(setSprintReport).catch(reportError);
-    api.raw(`/sprints/${sprintId}/scope-changes`)
-      .then(r => r.json()).then(d => setScopeChanges(Array.isArray(d) ? d : [])).catch(reportError);
+    api.send(`/sprints/${sprintId}/report`)
+      .then(setSprintReport).catch(reportError);
+    api.send(`/sprints/${sprintId}/scope-changes`)
+      .then(d => setScopeChanges(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function fetchSavedFilters() {
-    api.raw(`/saved-filters?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
-      .then(r => r.json()).then(d => setSavedFilters(Array.isArray(d) ? d : [])).catch(reportError);
+    api.send(`/saved-filters?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
+      .then(d => setSavedFilters(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   function fetchVelocityData() {
-    api.raw(`/sprints/velocity`)
-      .then(r => r.json()).then(d => setVelocityData(Array.isArray(d) ? d : [])).catch(reportError);
+    api.send(`/sprints/velocity`)
+      .then(d => setVelocityData(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   // Service Desk domain state and commands.
@@ -1044,7 +1103,7 @@ export default function AppShell() {
     fetchServiceCsat, assignServiceRequest, transitionServiceRequest, createServiceCustomer,
   } = useServiceState(api, activeWorkspaceId, showToast, reportError);  function fetchStatusDurations(itemId) {
     setStatusMetrics(EMPTY_STATUS_METRICS);
-    api.raw(`/work-items/${itemId}/status-durations`).then(r => r.json())
+    api.send(`/work-items/${itemId}/status-durations`)
       .then(d => setStatusMetrics(d && typeof d === 'object' && !Array.isArray(d)
         ? d
         : { ...EMPTY_STATUS_METRICS, durations: Array.isArray(d) ? d : [] }))
@@ -1052,8 +1111,8 @@ export default function AppShell() {
   }
   // severityClass / vStatusClass moved to compliance-view.jsx (TD-003).
   function fetchBranding() {
-    api.raw(`/workspaces/${activeWorkspaceId}/branding`)
-      .then(r => r.json()).then(d => {
+    api.send(`/workspaces/${activeWorkspaceId}/branding`)
+      .then(d => {
         setBranding(d);
         setBrandingColor(d.primaryColor || BRAND_ORANGE);
         setBrandingDesc(d.description || '');
@@ -1063,17 +1122,17 @@ export default function AppShell() {
   }
 
   function saveBranding() {
-    api.raw(`/workspaces/${activeWorkspaceId}/branding`, {
+    api.send(`/workspaces/${activeWorkspaceId}/branding`, {
       method: 'PUT',
       body: JSON.stringify({ primaryColor: brandingColor, description: brandingDesc })
-    }).then(r => r.json()).then(d => { setBranding(d); showToast('Branding saved'); }).catch(reportError);
+    }).then(d => { setBranding(d); showToast('Branding saved'); }).catch(reportError);
   }
 
   // ---- Iteration 3 fetches ----
   function fetchWorkflows(projectId) {
     const q = projectId ? `?projectId=${projectId}` : '';
-    api.raw(`/workflows${q}`)
-      .then(r => r.json()).then(d => setWorkflows(Array.isArray(d) ? d : [])).catch(reportError);
+    api.send(`/workflows${q}`)
+      .then(d => setWorkflows(Array.isArray(d) ? d : [])).catch(reportError);
   }
   /**
    * Fetch the active workflow for the board and derive one column per workflow status, ordered
@@ -1082,16 +1141,16 @@ export default function AppShell() {
    */
   function fetchActiveWorkflow(projectId) {
     const q = projectId ? `?projectId=${projectId}` : '';
-    api.raw(`/workflows${q}`)
-      .then(r => r.json())
+    api.send(`/workflows${q}`)
+      
       .then(list => {
         const all = Array.isArray(list) ? list : [];
         // Prefer the first default workflow; fall back to the first available one.
         const wf = all.find(w => w.isDefault) || all[0] || null;
         if (!wf) { setBoardColumns(null); return; }
         // Load the full workflow detail to get the ordered statuses list.
-        return api.raw(`/workflows/${wf.id}`)
-          .then(r => r.json())
+        return api.send(`/workflows/${wf.id}`)
+          
           .then(detail => {
             const statuses = Array.isArray(detail?.statuses)
               ? [...detail.statuses].sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
@@ -1107,20 +1166,20 @@ export default function AppShell() {
       .catch(() => setBoardColumns(null));
   }
   function fetchRoles() {
-    api.raw(`/permission-schemes/roles`)
-      .then(r => r.json()).then(d => setRoles(Array.isArray(d) ? d : [])).catch(reportError);
+    api.send(`/permission-schemes/roles`)
+      .then(d => setRoles(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function fetchWorkItemTypes() {
-    api.raw(`/work-item-types`)
-      .then(r => r.json()).then(d => setWorkItemTypes(d || { builtIn: [], custom: [] })).catch(reportError);
+    api.send(`/work-item-types`)
+      .then(d => setWorkItemTypes(d || { builtIn: [], custom: [] })).catch(reportError);
   }
   function fetchPermMatrix() {
-    api.raw(`/permission-schemes/matrix?workspaceId=${activeWorkspaceId}`)
-      .then(r => r.json()).then(d => setPermMatrix(d)).catch(reportError);
+    api.send(`/permission-schemes/matrix?workspaceId=${activeWorkspaceId}`)
+      .then(d => setPermMatrix(d)).catch(reportError);
   }
   function loadWorkflowDetail(wfId) {
-    api.raw(`/workflows/${wfId}`)
-      .then(r => r.json()).then(d => setWorkflowDetail(d)).catch(reportError);
+    api.send(`/workflows/${wfId}`)
+      .then(d => setWorkflowDetail(d)).catch(reportError);
   }
   function expandWorkflow(wfId) {
     if (expandedWorkflowId === wfId) { setExpandedWorkflowId(null); setWorkflowDetail(null); return; }
@@ -1130,32 +1189,32 @@ export default function AppShell() {
   }
   function addStatus(wfId) {
     if (!newStatusForm.name.trim()) return;
-    api.raw(`/workflows/${wfId}/statuses`, { method: 'POST', body: JSON.stringify(newStatusForm) })
-      .then(r => r.json()).then(() => { loadWorkflowDetail(wfId); setNewStatusForm({ name: '', color: BRAND_NAVY, category: 'IN_PROGRESS' }); }).catch(reportError);
+    api.send(`/workflows/${wfId}/statuses`, { method: 'POST', body: JSON.stringify(newStatusForm) })
+      .then(() => { loadWorkflowDetail(wfId); setNewStatusForm({ name: '', color: BRAND_NAVY, category: 'IN_PROGRESS' }); }).catch(reportError);
   }
   function deleteStatus(wfId, statusId) {
-    api.raw(`/workflows/${wfId}/statuses/${statusId}`, { method: 'DELETE' })
+    api.send(`/workflows/${wfId}/statuses/${statusId}`, { method: 'DELETE' })
       .then(() => loadWorkflowDetail(wfId)).catch(reportError);
   }
   function addTransition(wfId) {
     if (!newTransitionForm.name.trim() || !newTransitionForm.fromStatus || !newTransitionForm.toStatus) return;
-    api.raw(`/workflows/${wfId}/transitions`, { method: 'POST', body: JSON.stringify(newTransitionForm) })
-      .then(r => r.json()).then(() => { loadWorkflowDetail(wfId); setNewTransitionForm({ name: '', fromStatus: '', toStatus: '' }); }).catch(reportError);
+    api.send(`/workflows/${wfId}/transitions`, { method: 'POST', body: JSON.stringify(newTransitionForm) })
+      .then(() => { loadWorkflowDetail(wfId); setNewTransitionForm({ name: '', fromStatus: '', toStatus: '' }); }).catch(reportError);
   }
   function deleteTransition(wfId, transId) {
-    api.raw(`/workflows/${wfId}/transitions/${transId}`, { method: 'DELETE' })
+    api.send(`/workflows/${wfId}/transitions/${transId}`, { method: 'DELETE' })
       .then(() => loadWorkflowDetail(wfId)).catch(reportError);
   }
   function createWorkItemType() {
     if (!newTypeForm.label.trim()) return;
     const typeKey = newTypeForm.typeKey || newTypeForm.label.toUpperCase().replace(/\s+/g,'_');
-    api.raw(`/work-item-types`, { method: 'POST', body: JSON.stringify({ ...newTypeForm, typeKey, color: NEUTRAL_600, workspaceId: activeWorkspaceId }) })
-      .then(r => r.json()).then(() => { fetchWorkItemTypes(); setShowTypeForm(false); setNewTypeForm({ label: '', typeKey: '', icon: 'package' }); }).catch(reportError);
+    api.send(`/work-item-types`, { method: 'POST', body: JSON.stringify({ ...newTypeForm, typeKey, color: NEUTRAL_600, workspaceId: activeWorkspaceId }) })
+      .then(() => { fetchWorkItemTypes(); setShowTypeForm(false); setNewTypeForm({ label: '', typeKey: '', icon: 'package' }); }).catch(reportError);
   }
   function createRole() {
     if (!newRoleForm.name.trim()) return;
-    api.raw(`/permission-schemes/roles`, { method: 'POST', body: JSON.stringify({ ...newRoleForm, workspaceId: activeWorkspaceId }) })
-      .then(r => r.json()).then(() => { fetchRoles(); fetchPermMatrix(); setShowRoleForm(false); setNewRoleForm({ name: '', tier: 2 }); }).catch(reportError);
+    api.send(`/permission-schemes/roles`, { method: 'POST', body: JSON.stringify({ ...newRoleForm, workspaceId: activeWorkspaceId }) })
+      .then(() => { fetchRoles(); fetchPermMatrix(); setShowRoleForm(false); setNewRoleForm({ name: '', tier: 2 }); }).catch(reportError);
   }
   function runBql(opts) {
     setBqlError('');
@@ -1168,9 +1227,9 @@ export default function AppShell() {
     // /bql/execute path, so the named run is recorded; results flow into the same table.
     if (o.savedViewId) {
       const size = Number.isFinite(o.size) ? o.size : 100;
-      api.raw(`/saved-views/${encodeURIComponent(o.savedViewId)}/run`
+      api.send(`/saved-views/${encodeURIComponent(o.savedViewId)}/run`
         + `?workspaceId=${encodeURIComponent(activeWorkspaceId)}&size=${size}`, { method: 'POST' })
-        .then(r => r.json()).then(d => {
+        .then(d => {
           if (d.error || d.message) { setBqlError(d.message || d.error); setBqlResults([]); }
           else setBqlResults(Array.isArray(d) ? d : []);
         }).catch(err => setBqlError(err.message))
@@ -1180,8 +1239,8 @@ export default function AppShell() {
     const body = { query, workspaceId: activeWorkspaceId };
     if (typeof o.sort === 'string' && o.sort) body.sort = o.sort;
     if (Number.isFinite(o.size)) body.size = String(o.size);
-    api.raw(`/bql/execute`, { method: 'POST', body: JSON.stringify(body) })
-      .then(r => r.json()).then(d => {
+    api.send(`/bql/execute`, { method: 'POST', body: JSON.stringify(body) })
+      .then(d => {
         if (d.error) { setBqlError(d.error); setBqlResults([]); }
         else setBqlResults(Array.isArray(d) ? d : []);
       }).catch(err => setBqlError(err.message))
@@ -1209,8 +1268,8 @@ export default function AppShell() {
   // ── Iteration 4 completions ──────────────────────────────────────────────────
 
   function fetchCrossProjectDeps() {
-    api.raw(`/cross-project-dependencies`)
-      .then(r => r.json()).then(d => setCrossProjectDeps(Array.isArray(d) ? d : [])).catch(reportError);
+    api.send(`/cross-project-dependencies`)
+      .then(d => setCrossProjectDeps(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   function createCrossProjectDep() {
@@ -1233,8 +1292,8 @@ export default function AppShell() {
   function fetchTodayLayout(role) {
     const wsId = activeWorkspaceId;
     if (!wsId || !role) return;
-    api.raw(`/today-layouts/effective?workspaceId=${encodeURIComponent(wsId)}&role=${encodeURIComponent(role)}`)
-      .then(r => (r.ok ? r.json() : null))
+    api.send(`/today-layouts/effective?workspaceId=${encodeURIComponent(wsId)}&role=${encodeURIComponent(role)}`)
+      
       .then(d => {
         const widgets = d?.dashboard?.widgets?.length ? d.dashboard.widgets : null;
         setTodayLayout({ role, source: d?.source || 'builtin', widgets });
@@ -1252,7 +1311,7 @@ export default function AppShell() {
   }
 
   function resetTodayLayout(role) {
-    api.raw(`/today-layouts/personal?workspaceId=${encodeURIComponent(activeWorkspaceId)}&role=${encodeURIComponent(role)}`, { method: 'DELETE' })
+    api.send(`/today-layouts/personal?workspaceId=${encodeURIComponent(activeWorkspaceId)}&role=${encodeURIComponent(role)}`, { method: 'DELETE' })
       .then(() => { showToast('Reset to default'); fetchTodayLayout(role); })
       .catch(() => showToast('Failed to reset layout', 'error'));
   }
@@ -1271,8 +1330,7 @@ export default function AppShell() {
   // ── Data-widget executor (slice 5) — metric / guided / BQL, one workspace-scoped path ───────
   function fetchWidgetMetrics() {
     if (!activeWorkspaceId) return;
-    api.raw(`/widget-data/metrics?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
-      .then(r => (r.ok ? r.json() : []))
+    api.send(`/widget-data/metrics?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
       .then(d => setWidgetMetrics(Array.isArray(d) ? d : []))
       .catch(() => setWidgetMetrics([]));
   }
@@ -1304,7 +1362,7 @@ export default function AppShell() {
     else if (role === 'executive') url = `/dashboards/executive?workspaceId=${wsId}`;
     else if (role === 'admin') url = `/dashboards/admin?workspaceId=${wsId}`;
     else { setDashLoading(false); return; }
-    api.raw(url).then(r => r.json()).then(d => {
+    api.send(url).then(d => {
       if (role === 'developer') setDeveloperDash(d);
       else if (role === 'scrum-master') setSmDash(d);
       else if (role === 'product-owner') setPoDash(d);
@@ -1319,11 +1377,11 @@ export default function AppShell() {
 
   function fetchReleases(projectId) {
     const url = projectId ? `/releases?projectId=${projectId}` : `/releases`;
-    api.raw(url).then(r => r.json()).then(d => setReleases(Array.isArray(d) ? d : [])).catch(reportError);
+    api.send(url).then(d => setReleases(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   function fetchReleaseItems(releaseId) {
-    api.raw(`/releases/${releaseId}/items`).then(r => r.json()).then(d => setReleaseItems(Array.isArray(d) ? d : [])).catch(reportError);
+    api.send(`/releases/${releaseId}/items`).then(d => setReleaseItems(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   function createRelease() {
@@ -1367,8 +1425,8 @@ export default function AppShell() {
   }
 
   function fetchTrash() {
-    api.raw(`/work-items/trash`)
-      .then(r => r.json()).then(d => setTrashItems(Array.isArray(d) ? d : [])).catch(reportError);
+    api.send(`/work-items/trash`)
+      .then(d => setTrashItems(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   function restoreFromTrash(id) {
@@ -1391,8 +1449,8 @@ export default function AppShell() {
   function toggleStar(item) {
     const isStarred = item.starred;
     const method = isStarred ? 'DELETE' : 'POST';
-    api.raw(`/work-items/${item.id}/star`, { method, headers: headers() })
-      .then(r => r.json()).then(() => {
+    api.send(`/work-items/${item.id}/star`, { method, headers: headers() })
+      .then(() => {
         setWorkItems(prev => prev.map(i => i.id === item.id ? { ...i, starred: !isStarred } : i));
         if (selectedItem?.id === item.id) setSelectedItem(prev => ({ ...prev, starred: !isStarred }));
       }).catch(reportError);
@@ -1400,8 +1458,8 @@ export default function AppShell() {
 
   function fetchProjectMembers(projectId) {
     setSelectedProjectId(projectId);
-    api.raw(`/workspaces/${activeWorkspaceId}/projects/${projectId}/members`)
-      .then(r => r.json()).then(d => setProjectMembers(Array.isArray(d) ? d : [])).catch(reportError);
+    api.send(`/workspaces/${activeWorkspaceId}/projects/${projectId}/members`)
+      .then(d => setProjectMembers(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   function addProjectMember(projectId) {
@@ -1417,10 +1475,10 @@ export default function AppShell() {
 
   function addReply(workItemId, parentId) {
     if (!replyBody.trim()) return;
-    api.raw(`/work-items/${workItemId}/comments`, {
+    api.send(`/work-items/${workItemId}/comments`, {
       method: 'POST',
       body: JSON.stringify({ body: replyBody, isInternal: false, parentId })
-    }).then(r => r.json()).then(c => {
+    }).then(c => {
       setComments(prev => prev.map(cm =>
         cm.id === parentId ? { ...cm, replies: [...(cm.replies || []), { ...c, authorName: currentUser.fullName }] } : cm
       ));
@@ -1431,8 +1489,8 @@ export default function AppShell() {
   const handleCreateSprint = () => {
     const projectId = projects.length > 0 ? projects[0].id : null;
     if (!projectId) { showToast('A project must be available to create a sprint.', 'error'); return; }
-    api.raw(`/sprints`, { method: 'POST', body: JSON.stringify({ ...newSprint, projectId }) })
-      .then(r => r.json()).then(s => {
+    api.send(`/sprints`, { method: 'POST', body: JSON.stringify({ ...newSprint, projectId }) })
+      .then(s => {
         setSprints(prev => [s, ...prev]);
         setNewSprint({ name: '', goal: '', startDate: '', endDate: '', capacity: 40 });
         setIsSprintOpen(false);
@@ -1442,18 +1500,18 @@ export default function AppShell() {
   const handleSprintStatusChange = (sprintId, newStatus) => {
     const sprint = sprints.find(s => s.id === sprintId);
     if (!sprint) return;
-    api.raw(`/sprints/${sprintId}`, { method: 'PUT', body: JSON.stringify({ ...sprint, status: newStatus }) })
-      .then(r => r.json()).then(updated => {
+    api.send(`/sprints/${sprintId}`, { method: 'PUT', body: JSON.stringify({ ...sprint, status: newStatus }) })
+      .then(updated => {
         setSprints(prev => prev.map(s => s.id === updated.id ? updated : s));
         if (activeSprint?.id === updated.id) setActiveSprint(updated);
       });
   };
   const handleMoveToSprint = (itemId, sprintId) => {
-    api.raw(`/sprints/${sprintId}/items/${itemId}`, { method: 'POST', headers: headers() })
+    api.send(`/sprints/${sprintId}/items/${itemId}`, { method: 'POST', headers: headers() })
       .then(() => { fetchBacklog(); if (activeSprint) fetchSprintItems(activeSprint.id); });
   };
   const handleMoveToBacklog = (itemId, sprintId) => {
-    api.raw(`/sprints/${sprintId}/items/${itemId}`, { method: 'DELETE', headers: headers() })
+    api.send(`/sprints/${sprintId}/items/${itemId}`, { method: 'DELETE', headers: headers() })
       .then(() => { fetchBacklog(); fetchSprintItems(sprintId); });
   };
 
@@ -1471,7 +1529,7 @@ export default function AppShell() {
     const reordered = items.map((item, idx) => ({ ...item, backlogOrder: idx }));
     setBacklogItems(reordered);
     setDragOverId(null);
-    api.raw(`/work-items/backlog/reorder`, {
+    api.send(`/work-items/backlog/reorder`, {
       method: 'PUT',
       body: JSON.stringify(reordered.map((i, idx) => ({ id: i.id, order: idx })))
     }).catch(reportError);
@@ -1483,17 +1541,19 @@ export default function AppShell() {
     if (!item) return;
     const updated = { ...item, [field]: value };
     setBacklogItems(prev => prev.map(i => i.id === itemId ? updated : i));
-    api.raw(`/work-items/${itemId}`, { method: 'PUT', body: JSON.stringify(updated) })
-      .then(r => { if (r.status === 409) { showToast('That item changed elsewhere — refreshing', 'error'); fetchBacklog(); } })
-      .catch(reportError);
+    api.send(`/work-items/${itemId}`, { method: 'PUT', body: JSON.stringify(updated) })
+      .catch(err => {
+        if (err.status === 409) { showToast('That item changed elsewhere — refreshing', 'error'); fetchBacklog(); }
+        else reportError(err);
+      });
   };
 
   const handleSaveFilter = () => {
     if (!saveFilterName.trim()) return;
-    api.raw(`/saved-filters?workspaceId=${encodeURIComponent(activeWorkspaceId)}`, {
+    api.send(`/saved-filters?workspaceId=${encodeURIComponent(activeWorkspaceId)}`, {
       method: 'POST',
       body: JSON.stringify({ name: saveFilterName, filterJson: JSON.stringify(sprintFilters), isShared: false })
-    }).then(r => r.json()).then(f => { setSavedFilters(prev => [...prev, f]); setSaveFilterName(''); setShowSaveFilter(false); });
+    }).then(f => { setSavedFilters(prev => [...prev, f]); setSaveFilterName(''); setShowSaveFilter(false); });
   };
 
   // Filter + sort the sprint board with the shared Deliver model (replaces the old quick-filter chips).
@@ -1502,19 +1562,19 @@ export default function AppShell() {
   // LINKS
   const handleAddLink = () => {
     if (!newLink.targetId) return;
-    api.raw(`/work-items/${selectedItem.id}/links`, {
+    api.send(`/work-items/${selectedItem.id}/links`, {
       method: 'POST', body: JSON.stringify(newLink)
-    }).then(r => r.json()).then(l => { setLinks(prev => [...prev, l]); setNewLink({ targetId: '', linkType: 'RELATES_TO' }); });
+    }).then(l => { setLinks(prev => [...prev, l]); setNewLink({ targetId: '', linkType: 'RELATES_TO' }); });
   };
   const handleDeleteLink = (linkId) => {
-    api.raw(`/work-items/${selectedItem.id}/links/${linkId}`, { method: 'DELETE', headers: headers() })
+    api.send(`/work-items/${selectedItem.id}/links/${linkId}`, { method: 'DELETE', headers: headers() })
       .then(() => setLinks(prev => prev.filter(l => l.id !== linkId)));
   };
   // Create a typed link to a searched item (BLOCKS / RELATES_TO / DUPLICATES …).
   const handleCreateLink = (targetId, linkType) => {
     if (!targetId || !selectedItem) return;
-    api.raw(`/work-items/${selectedItem.id}/links`, { method: 'POST', body: JSON.stringify({ targetId, linkType }) })
-      .then(r => r.json()).then(l => setLinks(prev => [...prev, l])).catch(reportError);
+    api.send(`/work-items/${selectedItem.id}/links`, { method: 'POST', body: JSON.stringify({ targetId, linkType }) })
+      .then(l => setLinks(prev => [...prev, l])).catch(reportError);
   };
 
   // ── Hierarchy (parent/child) — uses the parent-only endpoint (no field clobbering) ──
@@ -1551,7 +1611,7 @@ export default function AppShell() {
     api.raw(`/work-items/${selectedItem.id}/attachments`, {
       method: 'POST',
       headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-      body: fd
+      formData: fd
     }).then(async res => {
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -1567,19 +1627,19 @@ export default function AppShell() {
     }).then(a => { if (a) setAttachments(prev => [a, ...prev]); });
   };
   const handleDeleteAttachment = (attId) => {
-    api.raw(`/work-items/${selectedItem.id}/attachments/${attId}`, { method: 'DELETE', headers: headers() })
+    api.send(`/work-items/${selectedItem.id}/attachments/${attId}`, { method: 'DELETE', headers: headers() })
       .then(() => setAttachments(prev => prev.filter(a => a.id !== attId)));
   };
   // Attach an external link (URL / webpage) — refetches so the new row carries server fields.
   const handleAttachLink = (url, title) =>
     api.send(`/work-items/${selectedItem.id}/attachments/link`, { method: 'POST', body: { url, title } })
-      .then(() => api.raw(`/work-items/${selectedItem.id}/attachments`, { headers: headers() })
-        .then(r => r.json()).then(d => setAttachments(Array.isArray(d) ? d : [])));
+      .then(() => api.send(`/work-items/${selectedItem.id}/attachments`, { headers: headers() })
+        .then(d => setAttachments(Array.isArray(d) ? d : [])));
 
   // PROJECT ARCHIVE
   const handleArchiveProject = (projectId) => {
-    api.raw(`/projects/${projectId}/archive`, { method: 'PUT', headers: headers() })
-      .then(r => r.json()).then(p => setProjects(prev => prev.map(x => x.id === p.id ? p : x)));
+    api.send(`/projects/${projectId}/archive`, { method: 'PUT', headers: headers() })
+      .then(p => setProjects(prev => prev.map(x => x.id === p.id ? p : x)));
   };
 
   // Map workflow category → dot-color token so board column headers are category-colored.
@@ -1999,7 +2059,7 @@ export default function AppShell() {
               deleteArticle, deleteArticleComment, deleteDashboard, deleteKnowledgeSpace, deleteRelease, deleteReport, deleteReportSchedule, deleteRule,
               deleteStatus, deleteTheme, deleteTransition, density, dependencies, developerDash, digest, dragOverId,
               editingArticle, editRuleBuilder, evaluateRule, excuseCeremony, execDash, expandedWorkflowId, expandWorkflow, exportComplianceAudit,
-              feedbackClusters, feedbackItems, fetchActionItems, fetchArticleChildren, fetchArticleDetail, fetchAssumptions, fetchBacklog, fetchCapacity,
+              feedbackClusters, feedbackItems, fetchActionItems, fetchArticleChildren, fetchArticleDetail, fetchAssumptions, fetchBacklog, fetchAll, fetchCapacity,
               fetchCeremonies, fetchCoachTips, fetchCockpitContext, fetchComplianceAudit, fetchComplianceDashboard, fetchComplianceRules, fetchComplianceTemplates, fetchComplianceViolations,
               fetchCrossProjectDeps, fetchDashboard, fetchDashboardAggregate, fetchDecisions, fetchDependencies, fetchDigest, fetchFieldDefs, fetchFieldLayouts,
               fetchFieldVisibility, fetchImpediments, fetchKnowledgeArticles, fetchLessons, fetchMeetings, fetchMembers, fetchMyDay, fetchNotifications,
@@ -2045,7 +2105,7 @@ export default function AppShell() {
               smTab, sprintFilters, sprintItems, sprintMetrics, sprintMetricsLoading, sprintReport, sprints, sprintSort,
               stakeholders, standupDraft, standups, startCeremony, startStandup, statusResolver, stopShare, submitArticleForReview, supportDash,
               submitMyStandup, swimlaneBy, teams, testRule, todayLayout, toggleArticleComment, togglePermission, toggleReportSchedule,
-              toggleStar, toggleViolationSelect, totalWorkItemCount, transitionServiceRequest, trashItems, unreadCount, updateArticle, updateDashboardWidgetConfig,
+              toggleStar, toggleViolationSelect, totalWorkItemCount, totalBacklogCount, transitionServiceRequest, trashItems, unreadCount, updateArticle, updateDashboardWidgetConfig,
               updateImpediment, updateKrProgress, updateRelease, updateReportSection, updateThemeStatus, userName, userPrefs, userRole, users,
               varianceResult, varianceSprintId, velocityData, view, violationFilter, voteIdea, voteRetroNote, widgetMetrics,
               wipLimits, workflowDetail, workflows, workItems, workItemTypes, workspaceMembers,

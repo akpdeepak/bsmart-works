@@ -13,8 +13,8 @@ import { Avatar } from '@/components/works/atoms/avatar';
 export function SprintItemList({ sprintId, users, onMoveToBacklog, onSelect }) {
   const [items, setItems] = useState([]);
   useEffect(() => {
-    api.raw(`/sprints/${sprintId}/items`)
-      .then(r => r.json()).then(d => setItems(Array.isArray(d) ? d : [])).catch(reportError);
+    api.send(`/sprints/${sprintId}/items`)
+      .then(d => setItems(Array.isArray(d) ? d : [])).catch(reportError);
   }, [sprintId]);
 
   if (items.length === 0) return <div className="px-5 py-4 text-sm text-neutral-600 text-center">No items in this sprint yet.</div>;

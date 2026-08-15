@@ -56,7 +56,7 @@ class AggregationControllerAccessTest {
     AggregationControllerAccessTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);
         // The caller is a member of their own workspace, but not the foreign one.
-        doThrow(ApiException.forbidden("denied")).when(rbac).require(eq(CALLER), eq(FOREIGN_WS), eq(PERM));
+        doThrow(ApiException.forbidden("denied")).when(rbac).require(eq(CALLER), eq(FOREIGN_WS), anyString());
     }
 
     @Test

@@ -42,7 +42,7 @@ export function useProductOwnerState(api, activeWorkspaceId, showToast, reportEr
     fetchRoadmapThemes(); fetchIdeas(); fetchFeedback(); fetchObjectives();
   }
   function fetchRoadmapThemes() {
-    api.raw(`/roadmap-themes?workspaceId=${activeWorkspaceId}`).then(r => r.json())
+    api.send(`/roadmap-themes?workspaceId=${activeWorkspaceId}`)
       .then(d => setRoadmapThemes(Array.isArray(d) ? d : [])).catch(() => setRoadmapThemes([]));
   }
   function createTheme() {
@@ -61,7 +61,7 @@ export function useProductOwnerState(api, activeWorkspaceId, showToast, reportEr
       .catch(() => showToast('Failed to delete theme', 'error'));
   }
   function fetchIdeas() {
-    api.raw(`/ideas?workspaceId=${activeWorkspaceId}`).then(r => r.json())
+    api.send(`/ideas?workspaceId=${activeWorkspaceId}`)
       .then(d => setIdeas(Array.isArray(d) ? d : [])).catch(() => setIdeas([]));
   }
   function createIdea() {
@@ -78,7 +78,7 @@ export function useProductOwnerState(api, activeWorkspaceId, showToast, reportEr
       .then(() => { showToast('Promoted to story'); fetchIdeas(); }).catch(() => showToast('Failed', 'error'));
   }
   function fetchFeedback() {
-    api.raw(`/customer-feedback?workspaceId=${activeWorkspaceId}`).then(r => r.json())
+    api.send(`/customer-feedback?workspaceId=${activeWorkspaceId}`)
       .then(d => setFeedbackItems(Array.isArray(d) ? d : [])).catch(() => setFeedbackItems([]));
   }
   function createFeedback() {
@@ -92,7 +92,7 @@ export function useProductOwnerState(api, activeWorkspaceId, showToast, reportEr
       .then(d => setFeedbackClusters(d)).catch(() => showToast('Clustering failed', 'error'));
   }
   function fetchObjectives() {
-    api.raw(`/objectives?workspaceId=${activeWorkspaceId}`).then(r => r.json())
+    api.send(`/objectives?workspaceId=${activeWorkspaceId}`)
       .then(d => setObjectives(Array.isArray(d) ? d : [])).catch(() => setObjectives([]));
   }
   function createObjective() {
@@ -102,7 +102,7 @@ export function useProductOwnerState(api, activeWorkspaceId, showToast, reportEr
       .catch(() => showToast('Failed to create objective', 'error'));
   }
   function openObjective(id) {
-    api.raw(`/objectives/${id}`).then(r => r.json()).then(d => setActiveObjective(d)).catch(reportError);
+    api.send(`/objectives/${id}`).then(d => setActiveObjective(d)).catch(reportError);
   }
   function addKeyResult() {
     if (!newKr.title.trim() || !activeObjective) { showToast('Key result title required', 'error'); return; }

@@ -60,7 +60,7 @@ class SprintControllerAccessTest {
     SprintControllerAccessTest() {
         when(authenticatedUser.id()).thenReturn(CALLER);
         when(rbac.workspaceForProject("PROJ-B")).thenReturn(FOREIGN_WS);
-        doThrow(ApiException.forbidden("denied")).when(rbac).require(eq(CALLER), eq(FOREIGN_WS), eq(PERM));
+        doThrow(ApiException.forbidden("denied")).when(rbac).require(eq(CALLER), eq(FOREIGN_WS), anyString());
     }
 
     private Sprint sprintInForeignWorkspace() {

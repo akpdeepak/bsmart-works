@@ -13,7 +13,7 @@ import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.EventService;
 import com.bcits.works.shared.RbacGate;
-import com.bcits.works.projects.ProjectSequenceService;
+import com.bcits.works.projects.api.ProjectSequenceService;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -97,11 +97,15 @@ public class WorkItemCommandService {
     }
 
     public WorkItem createWorkItem(WorkItem newItem) {
+        if (newItem.getProjectId() == null || newItem.getProjectId().isBlank()) {
+            throw ApiException.badRequest("MISSING_PROJECT", "A valid project ID is required to create a work item.");
+        }
         String userId = authenticatedUser.id();
         String wsId = rbac.workspaceForProject(newItem.getProjectId());
-        if (wsId != null) {
-            rbac.require(userId, wsId, "create_items");
+        if (wsId == null) {
+            throw ApiException.notFound("Project", newItem.getProjectId());
         }
+        rbac.require(userId, wsId, "create_items");
         if (newItem.getParentId() != null) {
             validateParentType(newItem.getParentId(), newItem.getType());
         }
@@ -150,9 +154,6 @@ public class WorkItemCommandService {
         }
         newItem.setCreatedAt(OffsetDateTime.now());
         newItem.setStatusChangedAt(newItem.getCreatedAt());
-        if (newItem.getProjectId() == null) {
-            newItem.setProjectId("PROJ-001");
-        }
 
         ExtensionExecutionService.ExtensionResult extResult = extensions.beforeWorkItemCreate(wsId, newItem, userId);
         if (extResult.rejected()) {

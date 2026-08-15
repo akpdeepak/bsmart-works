@@ -70,7 +70,7 @@ export function useScrumMasterCockpitState(api, activeWorkspaceId, showToast, re
   }
   function fetchDigest(pid) {
     setDigest(null);
-    api.raw(`/cockpit/digest?workspaceId=${activeWorkspaceId}&projectId=${pid}`).then(r => r.json())
+    api.send(`/cockpit/digest?workspaceId=${activeWorkspaceId}&projectId=${pid}`)
       .then(d => setDigest(d && d.rag ? d : null)).catch(() => setDigest(null));
   }
 
@@ -100,7 +100,7 @@ export function useScrumMasterCockpitState(api, activeWorkspaceId, showToast, re
       .catch(() => showToast('Retro clustering failed', 'error'));
   }
   function fetchMyDay(pid) {
-    api.raw(`/cockpit/my-day?projectId=${pid}`).then(r => r.json())
+    api.send(`/cockpit/my-day?projectId=${pid}`)
       .then(d => setMyDay(d && typeof d === 'object' ? d : null)).catch(() => setMyDay(null));
   }
   function submitMyStandup() {
@@ -112,11 +112,11 @@ export function useScrumMasterCockpitState(api, activeWorkspaceId, showToast, re
       .catch(() => showToast('Failed to record your update', 'error'));
   }
   function fetchCockpitContext(pid) {
-    api.raw(`/cockpit/context?projectId=${pid}`).then(r => r.json())
+    api.send(`/cockpit/context?projectId=${pid}`)
       .then(d => setCockpitContext(d && d.roleKey ? d : null)).catch(() => setCockpitContext(null));
   }
   function fetchCeremonies(pid) {
-    api.raw(`/ceremonies?projectId=${pid}`).then(r => r.json())
+    api.send(`/ceremonies?projectId=${pid}`)
       .then(d => setCeremonies(Array.isArray(d) ? d : [])).catch(() => setCeremonies([]));
   }
   function scheduleCeremony() {
@@ -127,7 +127,7 @@ export function useScrumMasterCockpitState(api, activeWorkspaceId, showToast, re
       .catch(() => showToast('Failed to schedule ceremony', 'error'));
   }
   function openCeremony(id) {
-    api.raw(`/ceremonies/${id}`).then(r => r.json()).then(d => setActiveCeremony(d)).catch(reportError);
+    api.send(`/ceremonies/${id}`).then(d => setActiveCeremony(d)).catch(reportError);
   }
   function startCeremony(id) {
     api.send(`/ceremonies/${id}/start`, { method: 'POST' })
@@ -149,7 +149,7 @@ export function useScrumMasterCockpitState(api, activeWorkspaceId, showToast, re
       .catch(() => showToast('Failed to complete ceremony', 'error'));
   }
   function fetchImpediments(pid) {
-    api.raw(`/impediments?projectId=${pid}`).then(r => r.json())
+    api.send(`/impediments?projectId=${pid}`)
       .then(d => setImpediments(Array.isArray(d) ? d : [])).catch(() => setImpediments([]));
   }
   function createImpediment() {
@@ -163,7 +163,7 @@ export function useScrumMasterCockpitState(api, activeWorkspaceId, showToast, re
       .then(() => fetchImpediments(i15ProjectId)).catch(() => showToast('Failed to update', 'error'));
   }
   function fetchStandups(pid) {
-    api.raw(`/standups?projectId=${pid}`).then(r => r.json())
+    api.send(`/standups?projectId=${pid}`)
       .then(d => setStandups(Array.isArray(d) ? d : [])).catch(() => setStandups([]));
   }
   function startStandup() {
@@ -173,7 +173,7 @@ export function useScrumMasterCockpitState(api, activeWorkspaceId, showToast, re
       .catch(() => showToast('Failed to start standup', 'error'));
   }
   function openStandup(id) {
-    api.raw(`/standups/${id}`).then(r => r.json()).then(d => setActiveStandup(d)).catch(reportError);
+    api.send(`/standups/${id}`).then(d => setActiveStandup(d)).catch(reportError);
   }
   function recordStandup(entryId) {
     api.send(`/standups/${activeStandup.session.id}/entries/${entryId}/record`, { method: 'POST', body: JSON.stringify(standupDraft) })
@@ -189,7 +189,7 @@ export function useScrumMasterCockpitState(api, activeWorkspaceId, showToast, re
       .then(d => { setActiveStandup(d); fetchStandups(i15ProjectId); showToast('Standup complete'); }).catch(reportError);
   }
   function fetchRetros(pid) {
-    api.raw(`/retros?projectId=${pid}`).then(r => r.json())
+    api.send(`/retros?projectId=${pid}`)
       .then(d => setRetros(Array.isArray(d) ? d : [])).catch(() => setRetros([]));
   }
   function createRetro() {
@@ -200,7 +200,7 @@ export function useScrumMasterCockpitState(api, activeWorkspaceId, showToast, re
   }
   function openRetro(id) {
     setRetroClusters(null);
-    api.raw(`/retros/${id}`).then(r => r.json()).then(d => setActiveRetro(d)).catch(reportError);
+    api.send(`/retros/${id}`).then(d => setActiveRetro(d)).catch(reportError);
   }
   function addRetroNote(columnKey) {
     const content = (retroNoteDraft[columnKey] || '').trim();
@@ -226,7 +226,7 @@ export function useScrumMasterCockpitState(api, activeWorkspaceId, showToast, re
   function fetchCapacity(sprintId) {
     if (!sprintId) return;
     setTabLoading('capacity', true);
-    api.raw(`/cockpit/capacity?workspaceId=${activeWorkspaceId}&sprintId=${sprintId}`).then(r => r.json())
+    api.send(`/cockpit/capacity?workspaceId=${activeWorkspaceId}&sprintId=${sprintId}`)
       .then(d => setCapacityBoard(d && Array.isArray(d.members) ? d : null)).catch(() => showToast('Capacity board failed', 'error'))
       .finally(() => setTabLoading('capacity', false));
   }
@@ -241,7 +241,7 @@ export function useScrumMasterCockpitState(api, activeWorkspaceId, showToast, re
     if (!sprintId) { showToast('Select a sprint', 'error'); return; }
     setRiskSprintId(sprintId);
     setTabLoading('risk', true);
-    api.raw(`/cockpit/risk-panel?workspaceId=${activeWorkspaceId}&sprintId=${sprintId}`).then(r => r.json())
+    api.send(`/cockpit/risk-panel?workspaceId=${activeWorkspaceId}&sprintId=${sprintId}`)
       .then(d => setRiskPanel(d)).catch(() => showToast('Risk panel failed', 'error'))
       .finally(() => setTabLoading('risk', false));
   }
@@ -249,7 +249,7 @@ export function useScrumMasterCockpitState(api, activeWorkspaceId, showToast, re
     if (!sprintId) { showToast('Select a sprint', 'error'); return; }
     setVarianceSprintId(sprintId);
     setTabLoading('variance', true);
-    api.raw(`/cockpit/variance?workspaceId=${activeWorkspaceId}&sprintId=${sprintId}`).then(r => r.json())
+    api.send(`/cockpit/variance?workspaceId=${activeWorkspaceId}&sprintId=${sprintId}`)
       .then(d => setVarianceResult(d)).catch(() => showToast('Variance analysis failed', 'error'))
       .finally(() => setTabLoading('variance', false));
   }

@@ -22,8 +22,7 @@ export function useWorkspaceContext(api, currentUser) {
     setError(false);
     setReady(false);
     try {
-      const response = await api.raw('/workspaces/mine');
-      const body = await response.json();
+      const body = await api.send('/workspaces/mine');
       const memberships = Array.isArray(body) ? body : [];
       const persistedId = localStorage.getItem(STORAGE_KEY) || '';
       const resolvedId = resolveActiveWorkspace(memberships, persistedId);

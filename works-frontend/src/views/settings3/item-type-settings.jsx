@@ -105,7 +105,7 @@ export default function ItemTypeSettings({
                     <p className="font-semibold text-neutral-900 dark:text-neutral-100 text-sm">{t.label}</p>
                     <p className="text-xs text-neutral-600 dark:text-neutral-400 font-mono truncate">{t.typeKey}</p>
                   </div>
-                  <Button unstyled onClick={() => api.raw(`/work-item-types/${t.id}`, { method: 'DELETE' }).then(() => fetchWorkItemTypes())}
+                  <Button unstyled onClick={() => api.send(`/work-item-types/${t.id}`, { method: 'DELETE' }).then(() => fetchWorkItemTypes())}
                     className="opacity-0 group-hover:opacity-100 text-semantic-danger text-xs transition-opacity absolute top-2 right-2" aria-label="Remove"><X className="h-3.5 w-3.5" aria-hidden="true" /></Button>
                 </div>
               ))}

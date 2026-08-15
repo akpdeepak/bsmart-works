@@ -30,19 +30,19 @@ export function useCustomFieldsState(api, activeWorkspaceId, showToast, reportEr
 
   function fetchFieldDefs(projectId) {
     const q = projectId ? `?projectId=${projectId}` : '';
-    api.raw(`/field-defs${q}`)
-      .then(r => r.json()).then(d => setFieldDefs(Array.isArray(d) ? d : [])).catch(reportError);
+    api.send(`/field-defs${q}`)
+      .then(d => setFieldDefs(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   function createFieldDef() {
     if (!newFieldForm.name.trim()) return;
-    api.raw(`/field-defs`, { method: 'POST', body: JSON.stringify({ ...newFieldForm, fieldKey: newFieldForm.name.toLowerCase().replace(/\s+/g, '_'), workspaceId: activeWorkspaceId }) })
-      .then(r => r.json()).then(() => { fetchFieldDefs(); setShowFieldForm(false); setNewFieldForm(EMPTY_FIELD_FORM); }).catch(reportError);
+    api.send(`/field-defs`, { method: 'POST', body: JSON.stringify({ ...newFieldForm, fieldKey: newFieldForm.name.toLowerCase().replace(/\s+/g, '_'), workspaceId: activeWorkspaceId }) })
+      .then(() => { fetchFieldDefs(); setShowFieldForm(false); setNewFieldForm(EMPTY_FIELD_FORM); }).catch(reportError);
   }
 
   function fetchFieldValues(workItemId) {
-    api.raw(`/field-defs/values/${workItemId}`)
-      .then(r => r.json()).then(d => {
+    api.send(`/field-defs/values/${workItemId}`)
+      .then(d => {
         const map = {};
         (Array.isArray(d) ? d : []).forEach(fv => { map[fv.fieldDefId] = fv.valueText ?? fv.valueNumber ?? fv.valueJson ?? ''; });
         setFieldValues(map);
@@ -56,8 +56,8 @@ export function useCustomFieldsState(api, activeWorkspaceId, showToast, reportEr
   }
 
   function fetchFieldLayouts() {
-    api.raw(`/field-layouts?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
-      .then(r => r.json())
+    api.send(`/field-layouts?workspaceId=${encodeURIComponent(activeWorkspaceId)}`)
+      
       .then(d => {
         const arr = Array.isArray(d) ? d : [];
         setFieldLayouts(arr.map(fl => ({ ...fl, layout: fl.layoutJson || fl.layout })));
@@ -67,8 +67,8 @@ export function useCustomFieldsState(api, activeWorkspaceId, showToast, reportEr
 
   function fetchFieldVisibility() {
     Promise.all((fieldDefs || []).map(fd =>
-      api.raw(`/permission-schemes/field-visibility/${fd.id}`)
-        .then(r => r.json())
+      api.send(`/permission-schemes/field-visibility/${fd.id}`)
+        
         .then(rows => (Array.isArray(rows) ? rows : []).map(row => ({ ...row, roleId: row.roleId || row.roleDefId })))
     ))
       .then(groups => setFieldVisibility(groups.flat()))

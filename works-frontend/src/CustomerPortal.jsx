@@ -209,12 +209,22 @@ export default function CustomerPortal() {
 
   if (!session) return <LoginScreen onLogin={setSession} />;
 
-  const logout = () => {
-    pApi().post('/portal/auth/logout').finally(() => {
+  const logout = async () => {
+    try {
+      await pApi().post('/portal/auth/logout');
+    } catch (e) {
+      // Best effort; proceed to local clearing even if network fails
+    } finally {
       localStorage.removeItem(PORTAL_KEY);
       setSession(null);
-    });
+    }
   };
+
+  useEffect(() => {
+    const onAuthExpired = () => logout();
+    window.addEventListener('auth-expired', onAuthExpired);
+    return () => window.removeEventListener('auth-expired', onAuthExpired);
+  }, []);
 
   const go = (next) => {
     setView(next);

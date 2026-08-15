@@ -5,7 +5,7 @@ import { ExportButtons } from './export-buttons';
 
 // The server export streams a blob through the single apiClient (CLAUDE.md §3).
 const raw = vi.fn();
-vi.mock('@/lib/apiClient', () => ({ api: { raw: (...a) => raw(...a) } }));
+vi.mock('@/lib/apiClient', () => ({ api: { send: vi.fn(), raw: (...a) => raw(...a) } }));
 
 // PNG capture is client-side (html2canvas); stub the helper so the test stays unit-level.
 const exportElementToPng = vi.fn();

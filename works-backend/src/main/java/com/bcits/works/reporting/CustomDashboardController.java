@@ -58,6 +58,13 @@ public class CustomDashboardController {
     // Sortable columns for the dashboards list — allow-listed (RB-10 §4 filtering discipline).
     private static final Set<String> SORTABLE = Set.of("updatedAt", "createdAt", "name");
 
+    private void requireWriteAccess(Dashboard d) {
+        String userId = authenticatedUser.id();
+        if (!userId.equals(d.getOwnerId())) {
+            rbac.require(userId, d.getWorkspaceId(), "manage_workspace");
+        }
+    }
+
     @GetMapping
     public PageResponse<Dashboard> list(@RequestParam(required = false) String workspaceId,
                                         @RequestParam(defaultValue = "0") int page,
@@ -81,6 +88,9 @@ public class CustomDashboardController {
     @PostMapping
     public Dashboard create(@Valid @RequestBody Dashboard dashboard) {
         String userId = authenticatedUser.id();
+        if (dashboard.getWorkspaceId() == null || rbac.getUserTier(userId, dashboard.getWorkspaceId()) < 1) {
+            throw ApiException.forbidden("Must be a workspace member to create dashboards.");
+        }
         dashboard.setId("DSH-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         dashboard.setOwnerId(userId);
         dashboard.setScope(dashboard.getScope() != null ? dashboard.getScope() : "PERSONAL");
@@ -100,7 +110,7 @@ public class CustomDashboardController {
     @PutMapping("/{id}")
     public Dashboard update(@PathVariable String id, @Valid @RequestBody Dashboard updated) {
         Dashboard existing = dashboardRepository.findById(id).orElseThrow();
-        rbac.require(authenticatedUser.id(), existing.getWorkspaceId(), "view_items");
+        requireWriteAccess(existing);
         return dashboardRepository.findById(id).map(d -> {
             d.setName(updated.getName());
             if (updated.getScope() != null) d.setScope(updated.getScope());
@@ -118,7 +128,7 @@ public class CustomDashboardController {
     public ResponseEntity<Void> delete(@PathVariable String id) {
         String userId = authenticatedUser.id();
         Dashboard existing = dashboardRepository.findById(id).orElseThrow();
-        rbac.require(userId, existing.getWorkspaceId(), "view_items");
+        requireWriteAccess(existing);
         dashboardRepository.deleteById(id);
         eventService.record(id, "DASHBOARD_DELETED", userId, "{}");
         return ResponseEntity.noContent().build();
@@ -129,7 +139,7 @@ public class CustomDashboardController {
     public Dashboard share(@PathVariable String id) {
         String userId = authenticatedUser.id();
         Dashboard d = dashboardRepository.findById(id).orElseThrow();
-        rbac.require(userId, d.getWorkspaceId(), "view_items");
+        requireWriteAccess(d);
         if (d.getShareToken() == null || d.getShareToken().isBlank()) {
             d.setShareToken(java.util.UUID.randomUUID().toString().replace("-", ""));
             d.setUpdatedAt(OffsetDateTime.now());
@@ -144,7 +154,7 @@ public class CustomDashboardController {
     public Dashboard unshare(@PathVariable String id) {
         String userId = authenticatedUser.id();
         Dashboard d = dashboardRepository.findById(id).orElseThrow();
-        rbac.require(userId, d.getWorkspaceId(), "view_items");
+        requireWriteAccess(d);
         d.setShareToken(null);
         d.setUpdatedAt(OffsetDateTime.now());
         dashboardRepository.save(d);
@@ -157,7 +167,7 @@ public class CustomDashboardController {
     public DashboardWidget addWidget(@PathVariable String id, @Valid @RequestBody DashboardWidget widget) {
         Dashboard d = dashboardRepository.findById(id).orElseThrow();
         // @Filter does not apply to findById (#243 Slice D) — re-check the dashboard's workspace.
-        rbac.require(authenticatedUser.id(), d.getWorkspaceId(), "view_items");
+        requireWriteAccess(d);
         widget.setId(null);
         widget.setDashboardId(id);
         widget.setCreatedAt(OffsetDateTime.now());
@@ -172,7 +182,7 @@ public class CustomDashboardController {
     public DashboardWidget updateWidget(@PathVariable String id, @PathVariable Long widgetId,
                                         @Valid @RequestBody DashboardWidget updated) {
         Dashboard d = dashboardRepository.findById(id).orElseThrow();
-        rbac.require(authenticatedUser.id(), d.getWorkspaceId(), "view_items");
+        requireWriteAccess(d);
         DashboardWidget w = widgetRepository.findById(widgetId).orElseThrow();
         // The widget must belong to this dashboard (findById bypasses @Filter — #243 Slice D).
         if (!id.equals(w.getDashboardId())) {
@@ -195,7 +205,7 @@ public class CustomDashboardController {
     @DeleteMapping("/{id}/widgets/{widgetId}")
     public ResponseEntity<Void> deleteWidget(@PathVariable String id, @PathVariable Long widgetId) {
         Dashboard d = dashboardRepository.findById(id).orElseThrow();
-        rbac.require(authenticatedUser.id(), d.getWorkspaceId(), "view_items");
+        requireWriteAccess(d);
         // The widget must belong to this dashboard before we delete it (findById bypasses @Filter).
         DashboardWidget w = widgetRepository.findById(widgetId)
                 .orElseThrow(() -> ApiException.notFound("DashboardWidget", String.valueOf(widgetId)));
@@ -211,7 +221,7 @@ public class CustomDashboardController {
     public List<DashboardWidget> saveLayout(@PathVariable String id,
                                             @RequestBody List<Map<String, Object>> items) {
         Dashboard d = dashboardRepository.findById(id).orElseThrow();
-        rbac.require(authenticatedUser.id(), d.getWorkspaceId(), "view_items");
+        requireWriteAccess(d);
         for (Map<String, Object> item : items) {
             Long widgetId = ((Number) item.get("id")).longValue();
             // Only relayout widgets that belong to this (authorized) dashboard.

@@ -43,7 +43,7 @@ const baseProps = {
 beforeEach(async () => {
   vi.clearAllMocks();
   const { api } = await import('@/lib/apiClient');
-  api.raw.mockResolvedValue({ ok: true, status: 204, json: () => Promise.resolve({}) });
+  api.send.mockResolvedValue({ ok: true, status: 204, json: () => Promise.resolve({}) });
   api.send.mockResolvedValue({});
 });
 
@@ -66,10 +66,12 @@ describe('NotificationsView', () => {
     const setInboxItems = vi.fn();
     render(<NotificationsView {...baseProps} inboxItems={[ACTION]} setInboxItems={setInboxItems} />);
     fireEvent.click(screen.getByRole('button', { name: 'Done' }));
-    await waitFor(() => expect(api.raw).toHaveBeenCalledWith('/inbox/done?workspaceId=WS-1', {
-      method: 'POST', body: JSON.stringify({ itemKey: ACTION.key }),
-    }));
-    expect(setInboxItems).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(api.send).toHaveBeenCalledWith('/inbox/done?workspaceId=WS-1', {
+        method: 'POST', body: JSON.stringify({ itemKey: ACTION.key }),
+      });
+      expect(setInboxItems).toHaveBeenCalled();
+    });
   });
 
   it('persists the selected snooze duration', async () => {
@@ -77,10 +79,10 @@ describe('NotificationsView', () => {
     render(<NotificationsView {...baseProps} inboxItems={[ACTION]} />);
     fireEvent.change(screen.getByLabelText('Snooze duration for Reply requested'), { target: { value: '4' } });
     fireEvent.click(screen.getByRole('button', { name: 'Snooze' }));
-    await waitFor(() => expect(api.raw).toHaveBeenCalledWith('/inbox/snooze?workspaceId=WS-1', expect.objectContaining({
+    await waitFor(() => expect(api.send).toHaveBeenCalledWith('/inbox/snooze?workspaceId=WS-1', expect.objectContaining({
       method: 'POST',
     })));
-    const body = JSON.parse(api.raw.mock.calls[0][1].body);
+    const body = JSON.parse(api.send.mock.calls[0][1].body);
     expect(body.itemKey).toBe(ACTION.key);
     expect(new Date(body.until).getTime()).toBeGreaterThan(Date.now() + 3 * 60 * 60 * 1000);
   });
@@ -95,7 +97,7 @@ describe('NotificationsView', () => {
     render(<NotificationsView {...baseProps} inboxItems={[approval]} />);
     fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
     await waitFor(() => expect(api.send).toHaveBeenCalledWith('/articles/A-1/publish', { method: 'PUT' }));
-    expect(api.raw).toHaveBeenCalledWith('/inbox/done?workspaceId=WS-1', expect.any(Object));
+    expect(api.send).toHaveBeenCalledWith('/inbox/done?workspaceId=WS-1', expect.any(Object));
   });
 
   it('replies from the Inbox and completes the action', async () => {
@@ -149,7 +151,7 @@ describe('NotificationsView', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Activity history' }));
     expect(screen.getByText('FYI only')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Mark all activity read' }));
-    await waitFor(() => expect(api.raw).toHaveBeenCalledWith('/notifications/mark-all-read?workspaceId=WS-1', { method: 'PUT' }));
+    await waitFor(() => expect(api.send).toHaveBeenCalledWith('/notifications/mark-all-read?workspaceId=WS-1', { method: 'PUT' }));
   });
 
   it('opens a work-item source in the real detail surface', () => {
@@ -178,7 +180,7 @@ describe('NotificationsView', () => {
 
   it('surfaces mutation failures', async () => {
     const { api } = await import('@/lib/apiClient');
-    api.raw.mockRejectedValueOnce(new Error('offline'));
+    api.send.mockRejectedValueOnce(new Error('offline'));
     render(<NotificationsView {...baseProps} inboxItems={[ACTION]} />);
     fireEvent.click(screen.getByRole('button', { name: 'Done' }));
     await waitFor(() => expect(baseProps.onError).toHaveBeenCalled());

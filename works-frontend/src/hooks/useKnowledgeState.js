@@ -33,26 +33,26 @@ export function useKnowledgeState(api, activeWorkspaceId, showToast, reportError
 
   function fetchKnowledgeSpaces() {
     setKnowledgeSpacesLoading(true);
-    api.raw(`/knowledge-spaces`).then(r => r.json()).then(d => setKnowledgeSpaces(Array.isArray(d) ? d : []))
+    api.send(`/knowledge-spaces`).then(d => setKnowledgeSpaces(Array.isArray(d) ? d : []))
       .catch(reportError).finally(() => setKnowledgeSpacesLoading(false));
   }
 
   function fetchKnowledgeArticles(spaceId) {
     const url = spaceId ? `/knowledge-spaces/${spaceId}/articles` : `/articles`;
     setKnowledgeArticlesLoading(true);
-    api.raw(url).then(r => r.json()).then(d => setKnowledgeArticles(Array.isArray(d) ? d : []))
+    api.send(url).then(d => setKnowledgeArticles(Array.isArray(d) ? d : []))
       .catch(reportError).finally(() => setKnowledgeArticlesLoading(false));
   }
 
   function fetchArticleDetail(articleId) {
     if (!articleId) return;
-    api.raw(`/articles/${articleId}`).then(r => r.json())
+    api.send(`/articles/${articleId}`)
       .then(d => { if (d && d.id) setSelectedArticle(d); }).catch(reportError);
   }
 
   function fetchArticleVersions(articleId) {
-    api.raw(`/articles/${articleId}/versions`)
-      .then(r => r.json()).then(d => setArticleVersions(Array.isArray(d) ? d : [])).catch(reportError);
+    api.send(`/articles/${articleId}/versions`)
+      .then(d => setArticleVersions(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   function createKnowledgeSpace() {
@@ -93,8 +93,8 @@ export function useKnowledgeState(api, activeWorkspaceId, showToast, reportError
   const restoreArticle        = id => articleWorkflow(id, 'restore', 'Article restored to draft');
 
   function fetchArticleComments(articleId) {
-    api.raw(`/articles/${articleId}/comments`)
-      .then(r => r.json()).then(d => setArticleComments(Array.isArray(d) ? d : [])).catch(reportError);
+    api.send(`/articles/${articleId}/comments`)
+      .then(d => setArticleComments(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   function addArticleComment(articleId) {
@@ -118,13 +118,13 @@ export function useKnowledgeState(api, activeWorkspaceId, showToast, reportError
   }
 
   function fetchArticleAnalytics(articleId) {
-    api.raw(`/articles/${articleId}/analytics`)
-      .then(r => r.json()).then(d => setArticleAnalytics(d)).catch(() => setArticleAnalytics(null));
+    api.send(`/articles/${articleId}/analytics`)
+      .then(d => setArticleAnalytics(d)).catch(() => setArticleAnalytics(null));
   }
 
   function fetchArticleChildren(articleId) {
-    api.raw(`/articles/${articleId}/children`)
-      .then(r => r.json()).then(d => setArticleChildren(Array.isArray(d) ? d : [])).catch(() => setArticleChildren([]));
+    api.send(`/articles/${articleId}/children`)
+      .then(d => setArticleChildren(Array.isArray(d) ? d : [])).catch(() => setArticleChildren([]));
   }
 
   function openArticlePanel(panel) {
@@ -145,8 +145,8 @@ export function useKnowledgeState(api, activeWorkspaceId, showToast, reportError
 
   function searchKnowledge() {
     if (!knowledgeSearch.trim()) return;
-    api.raw(`/articles?search=${encodeURIComponent(knowledgeSearch.trim())}`)
-      .then(r => r.json()).then(d => setKnowledgeSearchResults(Array.isArray(d) ? d : [])).catch(reportError);
+    api.send(`/articles?search=${encodeURIComponent(knowledgeSearch.trim())}`)
+      .then(d => setKnowledgeSearchResults(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   return {

@@ -19,8 +19,7 @@ export function PublicDashboardEmbed({ token, embedded = false }) {
   const [status, setStatus] = useState('loading'); // loading | ok | error
   useEffect(() => {
     let alive = true;
-    api.raw(`/public/dashboards/${encodeURIComponent(token)}`)
-      .then(r => { if (!r.ok) throw new Error('not found'); return r.json(); })
+    api.send(`/public/dashboards/${encodeURIComponent(token)}`)
       .then(d => { if (alive) { setData(d); setStatus('ok'); } })
       .catch(() => { if (alive) setStatus('error'); });
     return () => { alive = false; };

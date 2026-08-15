@@ -1,5 +1,6 @@
 package com.bcits.works.reporting;
 
+import com.bcits.works.shared.ApiException;
 import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.EventService;
 import com.bcits.works.shared.ListPaging;
@@ -68,7 +69,11 @@ public class ReportController {
 
     @GetMapping("/{id}")
     public Report get(@PathVariable String id) {
-        Report report = reportRepository.findById(id).orElseThrow();
+        return getReportOrNotFound(id);
+    }
+
+    private Report getReportOrNotFound(String id) {
+        Report report = reportRepository.findById(id).orElseThrow(() -> ApiException.notFound("Report", id));
         rbac.require(authenticatedUser.id(), report.getWorkspaceId(), "view_items");
         return report;
     }
@@ -76,6 +81,9 @@ public class ReportController {
     @PostMapping
     public Report create(@Valid @RequestBody Report report) {
         String userId = authenticatedUser.id();
+        if (report.getWorkspaceId() == null || rbac.getUserTier(userId, report.getWorkspaceId()) < 1) {
+            throw ApiException.forbidden("Must be a workspace member to create reports.");
+        }
         Report saved = reportRepository.save(reportService.prepareNew(report, userId));
         eventService.record(saved.getId(), "REPORT_CREATED", userId, "{}");
         return saved;
@@ -83,8 +91,11 @@ public class ReportController {
 
     @PutMapping("/{id}")
     public Report update(@PathVariable String id, @Valid @RequestBody Report updated) {
-        Report existing = reportRepository.findById(id).orElseThrow();
-        rbac.require(authenticatedUser.id(), existing.getWorkspaceId(), "view_items");
+        String userId = authenticatedUser.id();
+        Report existing = getReportOrNotFound(id);
+        if (!userId.equals(existing.getOwnerId())) {
+            rbac.require(userId, existing.getWorkspaceId(), "manage_workspace");
+        }
         return reportRepository.findById(id)
             .map(r -> reportRepository.save(reportService.applyUpdate(r, updated)))
             .orElseThrow();
@@ -93,8 +104,10 @@ public class ReportController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
         String userId = authenticatedUser.id();
-        Report existing = reportRepository.findById(id).orElseThrow();
-        rbac.require(userId, existing.getWorkspaceId(), "view_items");
+        Report existing = getReportOrNotFound(id);
+        if (!userId.equals(existing.getOwnerId())) {
+            rbac.require(userId, existing.getWorkspaceId(), "manage_workspace");
+        }
         reportRepository.deleteById(id);
         eventService.record(id, "REPORT_DELETED", userId, "{}");
         return ResponseEntity.noContent().build();

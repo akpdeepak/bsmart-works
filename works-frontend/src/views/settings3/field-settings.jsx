@@ -88,7 +88,7 @@ export function CustomFieldsSettings({
                     <td className="px-4 py-3 font-mono text-xs text-neutral-600 dark:text-neutral-400">{fd.fieldKey}</td>
                     <td className="px-4 py-3"><span className={`text-xs font-semibold ${fd.required ? 'text-semantic-danger' : 'text-neutral-300'}`}>{fd.required ? <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5" aria-hidden="true" />Required</span> : 'Optional'}</span></td>
                     <td className="px-4 py-3">
-                      <Button unstyled onClick={() => api.raw(`/field-defs/${fd.id}`, { method: 'DELETE' }).then(() => fetchFieldDefs())}
+                      <Button unstyled onClick={() => api.send(`/field-defs/${fd.id}`, { method: 'DELETE' }).then(() => fetchFieldDefs())}
                         className="text-xs text-semantic-danger hover:underline">Delete</Button>
                     </td>
                   </tr>

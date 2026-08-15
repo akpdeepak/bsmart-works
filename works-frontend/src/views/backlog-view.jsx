@@ -24,7 +24,7 @@ import { PageLayout } from '@/components/works/templates/page-layout';
 export default function BacklogView({
   loading = false,
   workItems,
-  backlogItems,
+  backlogItems, totalBacklogCount, fetchBacklog,
   sprints,
   users,
   refinementMode,

@@ -58,7 +58,7 @@ public class WorkItemTypeConfigController {
     @PostMapping
     public WorkItemTypeConfig create(@Valid @RequestBody WorkItemTypeConfig config) {
         // Authorize against the target workspace from the body (RB-40 §1, #243 Slice D).
-        rbac.require(authenticatedUser.id(), config.getWorkspaceId(), "view_items");
+        rbac.require(authenticatedUser.id(), config.getWorkspaceId(), "manage_fields");
         config.setId("WIT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         config.setIsCustom(true);
         config.setCreatedAt(OffsetDateTime.now());
@@ -70,7 +70,7 @@ public class WorkItemTypeConfigController {
         // findById bypasses @Filter (#243 Slice D) — re-check the config's workspace before mutating.
         WorkItemTypeConfig c = typeConfigRepo.findById(id)
                 .orElseThrow(() -> ApiException.notFound("WorkItemTypeConfig", id));
-        rbac.require(authenticatedUser.id(), c.getWorkspaceId(), "view_items");
+        rbac.require(authenticatedUser.id(), c.getWorkspaceId(), "manage_fields");
         c.setLabel(updated.getLabel());
         c.setIcon(updated.getIcon());
         c.setColor(updated.getColor());
@@ -84,7 +84,7 @@ public class WorkItemTypeConfigController {
     public ResponseEntity<Void> delete(@PathVariable String id) {
         WorkItemTypeConfig c = typeConfigRepo.findById(id)
                 .orElseThrow(() -> ApiException.notFound("WorkItemTypeConfig", id));
-        rbac.require(authenticatedUser.id(), c.getWorkspaceId(), "view_items");
+        rbac.require(authenticatedUser.id(), c.getWorkspaceId(), "manage_fields");
         typeConfigRepo.deleteById(id);
         return ResponseEntity.noContent().build();
     }

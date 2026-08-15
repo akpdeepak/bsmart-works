@@ -1,0 +1,36 @@
+planUrl: https://github.com/akpdeepak/bsmart-works/issues/560
+
+## Summary
+Resolves various warnings reported by the IDE, including unused constructors, unboxing warnings, generic exception catch blocks, and unused variables/imports.
+
+## Scope
+What is included:
+- Replaced unused constructors with `@BeforeEach` setup methods in test files.
+- Replaced generic `Exception` catch clauses with specific exceptions.
+- Addressed unboxing warnings on nullable fields.
+- Cleaned up unused imports and variables.
+
+## Validation
+How to validate this change:
+- Step 1: Check GitHub Actions to verify tests are passing.
+- TDD / Evidence:
+  - Unit tests: Updated tests in backend.
+  - CI run: Will be triggered on push.
+
+<!-- bsmart-pr-evidence
+{
+  "protocol": "bsmart-pr/v1",
+  "task": "GH-560",
+  "planUrl": "https://github.com/akpdeepak/bsmart-works/issues/560",
+  "validation": [
+    { "id": "val-1", "command": "npm run verify" }
+  ],
+  "acceptance": [
+    { "id": "acc-1", "evidence": ["val-1"] }
+  ],
+  "tdd": {
+    "applicable": false,
+    "reason": "Fixing minor IDE warnings"
+  }
+}
+-->

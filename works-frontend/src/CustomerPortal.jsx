@@ -5,6 +5,8 @@ import { api } from '@/lib/apiClient';
 import { smartDate } from '@/lib/format';
 import { slaLabel, slaTone } from '@/lib/serviceSla';
 import { SupportChatWidget } from '@/components/works/organisms/support-chat-widget';
+import { EmptyState } from '@/components/works/molecules/empty-state';
+import { FileText, Inbox, CheckCircle } from 'lucide-react';
 
 // ── Separate customer session (distinct from the internal bSmartSession) ──────────────
 const PORTAL_KEY = 'bSmartPortalSession';
@@ -64,10 +66,10 @@ function LoginScreen({ onLogin }) {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-neutral-50 p-4">
-      <div className="w-full max-w-md rounded-xl border border-neutral-200 bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-bold text-brand-navy">Customer Portal</h1>
-        <p className="mt-1 text-sm text-neutral-600">Sign in to raise and track your support requests.</p>
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-neutral-50 to-neutral-200 dark:from-neutral-900 dark:to-neutral-800 p-4">
+      <div className="w-full max-w-md glass-card p-8 shadow-xl animate-fade-in-up">
+        <h1 className="text-2xl font-bold text-brand-navy dark:text-white">Customer Portal</h1>
+        <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">Sign in to raise and track your support requests.</p>
         {error && (
           <div className="mt-4 rounded-md bg-semantic-danger-surface p-3 text-sm text-semantic-danger">{error}</div>
         )}
@@ -295,9 +297,9 @@ export default function CustomerPortal() {
                 { label: 'Total', value: dashboard?.totals?.total ?? 0 },
                 { label: 'SLA at risk', value: dashboard?.totals?.slaBreached ?? 0 },
               ].map((c) => (
-                <div key={c.label} className="rounded-xl border border-neutral-200 bg-white p-4">
+                <div key={c.label} className="glass-card p-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
                   <p className="text-xs font-semibold uppercase tracking-wide text-neutral-400">{c.label}</p>
-                  <p className="mt-1 text-3xl font-bold text-brand-navy">{c.value}</p>
+                  <p className="mt-1 text-3xl font-bold text-brand-navy dark:text-white">{c.value}</p>
                 </div>
               ))}
             </div>
@@ -308,9 +310,9 @@ export default function CustomerPortal() {
             <div>
               <h3 className="mb-2 text-sm font-semibold text-neutral-700">Recent resolutions</h3>
               {(dashboard?.recentResolutions || []).length === 0 ? (
-                <p className="text-sm text-neutral-500">No resolved requests yet.</p>
+                <EmptyState icon={CheckCircle} title="No recent resolutions" description="When your requests are resolved, they will appear here." />
               ) : (
-                <ul className="divide-y divide-neutral-100 rounded-xl border border-neutral-200 bg-white">
+                <ul className="divide-y divide-neutral-100 glass-card">
                   {dashboard.recentResolutions.map((r) => (
                     <li key={r.id}>
                       <button type="button" onClick={() => openRequest(r.id)}
@@ -335,15 +337,15 @@ export default function CustomerPortal() {
               <div className="grid gap-3 sm:grid-cols-2">
                 {types.map((t) => (
                   <button key={t.id} type="button" onClick={() => setChosenType(t)}
-                    className="rounded-xl border border-neutral-200 bg-white p-4 text-left hover:border-brand-navy-tint">
+                    className="glass-card p-4 text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-brand-navy-tint">
                     <p className="font-semibold text-neutral-900">{t.name}</p>
                     <p className="mt-1 text-sm text-neutral-600">{t.description}</p>
                   </button>
                 ))}
-                {types.length === 0 && <p className="text-sm text-neutral-500">No request types are available.</p>}
+                {types.length === 0 && <EmptyState icon={FileText} title="No request types" description="There are no request types available." />}
               </div>
             ) : (
-              <div className="rounded-xl border border-neutral-200 bg-white p-5">
+              <div className="glass-card p-5 animate-scale-in">
                 <RequestForm type={chosenType} busy={busy}
                   onCancel={() => setChosenType(null)} onSubmit={submitRequest} />
               </div>
@@ -352,12 +354,12 @@ export default function CustomerPortal() {
         )}
 
         {view === 'requests' && (
-          <div className="space-y-4">
+          <div className="space-y-4 animate-fade-in-up">
             <h2 className="text-xl font-semibold text-neutral-900">My requests</h2>
             {requests.length === 0 ? (
-              <p className="text-sm text-neutral-500">You have not raised any requests yet.</p>
+              <EmptyState icon={Inbox} title="No requests yet" description="You have not raised any requests yet." actionLabel="Raise a request" onAction={() => go('new')} />
             ) : (
-              <ul className="divide-y divide-neutral-100 rounded-xl border border-neutral-200 bg-white">
+              <ul className="divide-y divide-neutral-100 glass-card">
                 {requests.map((r) => (
                   <li key={r.id}>
                     <button type="button" onClick={() => openRequest(r.id)}
@@ -388,9 +390,9 @@ export default function CustomerPortal() {
               <Button type="submit" variant="secondary">Search</Button>
             </form>
             {articles.length === 0 ? (
-              <p className="text-sm text-neutral-500">No articles found.</p>
+              <EmptyState icon={FileText} title="No articles found" description="We couldn't find any knowledge base articles." />
             ) : (
-              <ul className="divide-y divide-neutral-100 rounded-xl border border-neutral-200 bg-white">
+              <ul className="divide-y divide-neutral-100 glass-card">
                 {articles.map((a) => (
                   <li key={a.id}>
                     <button type="button" onClick={() => openArticle(a.id)}
@@ -438,9 +440,9 @@ function RequestDetail({ request, onBack, onCsat }) {
   const canRate = (request.status === 'RESOLVED' || request.status === 'CLOSED') && !request.rated;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 animate-fade-in-up">
       <Button type="button" variant="link" onClick={onBack}>← Back to my requests</Button>
-      <div className="rounded-xl border border-neutral-200 bg-white p-5">
+      <div className="glass-card p-5">
         <div className="flex items-start justify-between gap-3">
           <h2 className="text-xl font-semibold text-neutral-900">{request.subject}</h2>
           <div className="flex shrink-0 gap-2">

@@ -30,23 +30,27 @@ export class ErrorBoundary extends React.Component {
     return (
       <div
         role="alert"
-        className="flex min-h-screen flex-col items-center justify-center gap-4 bg-neutral-50 p-6 text-center dark:bg-neutral-900"
+        className="flex min-h-screen flex-col items-center justify-center bg-neutral-50 p-6 dark:bg-neutral-900"
       >
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-semantic-danger-surface">
-          <AlertTriangle aria-hidden="true" className="h-6 w-6 text-semantic-danger" />
+        <div className="glass-card flex max-w-md flex-col items-center gap-4 p-8 text-center animate-scale-in">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-semantic-danger-surface">
+            <AlertTriangle aria-hidden="true" className="h-8 w-8 text-semantic-danger" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">
+              Something went wrong
+            </h1>
+            <p className="text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
+              An unexpected error interrupted this view. Your work is saved — reloading usually
+              fixes it. If it keeps happening, contact your workspace admin.
+            </p>
+          </div>
+          <div className="mt-2">
+            <Button variant="primary" onClick={this.handleReload}>
+              Reload Application
+            </Button>
+          </div>
         </div>
-        <div className="space-y-1">
-          <h1 className="text-xl font-bold text-neutral-900 dark:text-neutral-100">
-            Something went wrong
-          </h1>
-          <p className="max-w-md text-sm text-neutral-600 dark:text-neutral-300">
-            An unexpected error interrupted this view. Your work is saved — reloading usually
-            fixes it. If it keeps happening, contact your workspace admin.
-          </p>
-        </div>
-        <Button variant="primary" onClick={this.handleReload}>
-          Reload
-        </Button>
       </div>
     );
   }

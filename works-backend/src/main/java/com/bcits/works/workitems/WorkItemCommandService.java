@@ -124,7 +124,7 @@ public class WorkItemCommandService {
                     teamId = (String) res.get(0).get("id");
                     teamKey = (String) res.get(0).get("team_key");
                 }
-            } catch (Exception ex) {
+            } catch (org.springframework.dao.DataAccessException ex) {
                 log.warn("Failed to find team for project {}", newItem.getProjectId(), ex);
             }
         }
@@ -359,8 +359,8 @@ public class WorkItemCommandService {
         }
         if (!java.util.Objects.equals(oldStoryPoints, saved.getStoryPoints())) {
             eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "storyPoints",
-                String.valueOf(oldStoryPoints != null ? oldStoryPoints : 0),
-                String.valueOf(saved.getStoryPoints() != null ? saved.getStoryPoints() : 0));
+                oldStoryPoints == null ? "0" : String.valueOf(oldStoryPoints),
+                saved.getStoryPoints() == null ? "0" : String.valueOf(saved.getStoryPoints()));
         }
         if (!java.util.Objects.equals(oldDescription, saved.getDescription())) {
             eventService.recordDiff(id, "WORK_ITEM_UPDATED", userId, "description", "edited", "edited");
@@ -444,7 +444,7 @@ public class WorkItemCommandService {
         try {
             jdbc.update("UPDATE work_items SET custom_fields = ?::jsonb WHERE id = ?",
                 objectMapper.writeValueAsString(fields), itemId);
-        } catch (Exception ignored) {
+        } catch (com.fasterxml.jackson.core.JsonProcessingException | org.springframework.dao.DataAccessException ignored) {
         }
     }
 
@@ -492,7 +492,7 @@ public class WorkItemCommandService {
         }
         try {
             return objectMapper.readValue(raw.get(0), new TypeReference<List<String>>() { });
-        } catch (Exception e) {
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
             // A malformed rule must not silently widen the hierarchy — fall back to the built-in one.
             log.warn("Ignoring unreadable valid_parent_types for type {} in workspace {}: {}",
                 childType, workspaceId, e.getMessage());

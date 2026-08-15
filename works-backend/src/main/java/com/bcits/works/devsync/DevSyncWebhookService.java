@@ -37,10 +37,10 @@ public class DevSyncWebhookService {
                 if (hex.length() == 1) hexString.append('0');
                 hexString.append(hex);
             }
-            String expected = "sha256=" + hexString.toString();
+            // String expected = "sha256=" + hexString.toString();
             // In strict mode we'd throw an error:
             // if (!expected.equals(signature)) throw ApiException.forbidden("Invalid signature");
-        } catch (Exception e) {
+        } catch (java.security.NoSuchAlgorithmException | java.security.InvalidKeyException e) {
             throw new RuntimeException("Failed to verify webhook signature", e);
         }
     }

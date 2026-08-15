@@ -1,7 +1,7 @@
 import { CheckSquare, Square } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { onPressKey } from '@/lib/utils';
-import { articlePreview, STATUS_CHIP } from './knowledge-view-helpers';
+import { articlePreview, STATUS_CHIP } from '@/views/knowledge/knowledge-view-helpers';
 
 // Shared article list card — used in both the space view and search results.
 // KR-038: selectable — shows a checkbox when bulkMode is true.

@@ -98,18 +98,25 @@ public class DeveloperWorkspaceDao {
      */
     public List<Map<String, Object>> recentActivity(String workspaceId, String userId) {
         return jdbc.query(
-            "SELECT e.aggregate_id, e.event_type, e.occurred_at FROM events e " +
+            "SELECT e.aggregate_id AS providerEventId, e.aggregate_id AS workItemId, e.event_type, e.occurred_at, 'System' AS provider " +
+            "FROM events e " +
             "WHERE e.actor_id = ? AND (e.workspace_id = ? OR (e.workspace_id IS NULL AND EXISTS (" +
             "  SELECT 1 FROM work_items wi JOIN projects p ON p.id = wi.project_id " +
             "  WHERE wi.id = e.aggregate_id AND p.workspace_id = ?))) " +
-            "ORDER BY e.occurred_at DESC LIMIT 12",
+            "UNION ALL " +
+            "SELECT d.id AS providerEventId, d.work_item_id AS workItemId, d.event_type, d.created_at AS occurred_at, d.provider " +
+            "FROM devsync_events d WHERE d.workspace_id = ? " +
+            "ORDER BY occurred_at DESC LIMIT 20",
             (rs, i) -> {
                 Map<String, Object> m = new LinkedHashMap<>();
-                m.put("aggregateId", rs.getString("aggregate_id"));
+                m.put("providerEventId", rs.getString("providerEventId"));
+                m.put("aggregateId", rs.getString("workItemId"));
+                m.put("workItemId", rs.getString("workItemId"));
                 m.put("eventType", rs.getString("event_type"));
                 m.put("occurredAt", rs.getObject("occurred_at"));
+                m.put("provider", rs.getString("provider"));
                 return m;
-            }, userId, workspaceId, workspaceId);
+            }, userId, workspaceId, workspaceId, workspaceId);
     }
 
     /**

@@ -5,7 +5,8 @@ export default {
   component: Skeleton,
   tags: ['autodocs'],
   parameters: {
-    // Skeletons are presentational loading placeholders — no meaningful a11y role.
+    // Skeletons are visually presentational, but the wrappers should carry aria-busy="true" 
+    // and ideally aria-live="polite" to communicate loading state effectively to screen readers.
     a11y: { test: 'todo' },
   },
 };

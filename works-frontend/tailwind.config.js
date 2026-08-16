@@ -74,6 +74,8 @@ export default {
         md: '0 2px 8px rgba(11, 47, 92, 0.08)',
         lg: '0 8px 24px rgba(11, 47, 92, 0.12)',
         xl: '0 16px 48px rgba(11, 47, 92, 0.16)',
+        soft: '0 8px 30px rgba(0, 0, 0, 0.04)',
+        glow: '0 0 20px rgba(30, 77, 140, 0.15)',
       },
       transitionDuration: {
         instant: '0ms',
@@ -126,10 +128,20 @@ export default {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
         },
+        'fade-in-up': {
+          '0%': { opacity: '0', transform: 'translateY(10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        'scale-in': {
+          '0%': { opacity: '0', transform: 'scale(0.95)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
       },
       animation: {
         shimmer: 'shimmer 1.5s infinite linear',
         'fade-in': 'fade-in 200ms ease-in forwards',
+        'fade-in-up': 'fade-in-up 400ms cubic-bezier(0.22, 1, 0.36, 1) forwards',
+        'scale-in': 'scale-in 300ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
       },
     },
   },

@@ -36,6 +36,16 @@ describe('AiCommandBar', () => {
     expect(await screen.findByRole('button', { name: /open ai command bar/i })).toBeInTheDocument();
   });
 
+  it('opens globally with Cmd/Ctrl+J', async () => {
+    aiClient.capabilities.mockResolvedValue(ENABLED_CAPS);
+    render(<AiCommandBar workspaceId="ws-1" />);
+    await screen.findByRole('button', { name: /open ai command bar/i });
+
+    fireEvent.keyDown(window, { key: 'j', ctrlKey: true });
+
+    expect(screen.getByLabelText('AI command')).toBeInTheDocument();
+  });
+
   it('parses a command into an editable plan and confirms execution', async () => {
     aiClient.capabilities.mockResolvedValue(ENABLED_CAPS);
     aiClient.parseCommand.mockResolvedValue({

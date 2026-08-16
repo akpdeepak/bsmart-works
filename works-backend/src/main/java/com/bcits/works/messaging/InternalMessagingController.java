@@ -15,8 +15,8 @@ import com.bcits.works.messaging.api.PinnedMessageRepository;
 import com.bcits.works.shared.AuthenticatedUser;
 import com.bcits.works.shared.RbacGate;
 import com.bcits.works.shared.ApiException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -43,8 +43,8 @@ import java.util.stream.Collectors;
  *   <li>Every query that touches a tenant-owned row re-checks {@code workspaceId} on the
  *       loaded entity to prevent cross-tenant access via PK guessing (RB-40 §1).</li>
  *   <li>AI endpoints return review-only drafts; no AI output is auto-persisted (RB-40 §2.1).</li>
- *   <li>@Transactional is NOT on this class — it belongs in service-layer methods, not
- *       controllers (RB-10 §2). Participant removal uses a single repository delete call.</li>
+ *   <li>Transaction boundaries belong to service-layer methods, not controllers (RB-10 §2).
+ *       Participant removal uses a single repository delete call.</li>
  * </ul>
  */
 @RestController
@@ -61,7 +61,9 @@ public class InternalMessagingController {
     private final RbacGate rbac;
     private final MessageArtifactService messageArtifacts;
     private final MessagingAiService aiService;
+    private final InternalMessagingMutationService mutationService;
 
+    @Autowired
     public InternalMessagingController(ChatConversationRepository conversationRepo,
                                        ChatMessageRepository messageRepo,
                                        ConversationParticipantRepository participantRepo,
@@ -71,7 +73,8 @@ public class InternalMessagingController {
                                        AuthenticatedUser authenticatedUser,
                                        RbacGate rbac,
                                        MessageArtifactService messageArtifacts,
-                                       MessagingAiService aiService) {
+                                       MessagingAiService aiService,
+                                       InternalMessagingMutationService mutationService) {
         this.conversationRepo = conversationRepo;
         this.messageRepo = messageRepo;
         this.participantRepo = participantRepo;
@@ -82,6 +85,22 @@ public class InternalMessagingController {
         this.rbac = rbac;
         this.messageArtifacts = messageArtifacts;
         this.aiService = aiService;
+        this.mutationService = mutationService;
+    }
+
+    InternalMessagingController(ChatConversationRepository conversationRepo,
+                                ChatMessageRepository messageRepo,
+                                ConversationParticipantRepository participantRepo,
+                                MessageReactionRepository reactionRepo,
+                                MessageReadRepository readRepo,
+                                PinnedMessageRepository pinRepo,
+                                AuthenticatedUser authenticatedUser,
+                                RbacGate rbac,
+                                MessageArtifactService messageArtifacts,
+                                MessagingAiService aiService) {
+        this(conversationRepo, messageRepo, participantRepo, reactionRepo, readRepo, pinRepo,
+                authenticatedUser, rbac, messageArtifacts, aiService,
+                new InternalMessagingMutationService(participantRepo, reactionRepo, pinRepo));
     }
 
     // ─────────────────────────────── Conversations ────────────────────────────
@@ -200,13 +219,12 @@ public class InternalMessagingController {
     }
 
     @DeleteMapping("/conversations/{id}/participants/{userId}")
-    @Transactional
     public Map<String, String> removeParticipant(@PathVariable String id,
                                                   @PathVariable String userId,
                                                   @RequestParam String workspaceId) {
         rbac.require(authenticatedUser.id(), workspaceId, "work_write");
         requireConversationInWorkspace(id, workspaceId);
-        participantRepo.deleteByConversationIdAndUserId(id, userId);
+        mutationService.removeParticipant(id, userId);
         return Map.of("status", "removed");
     }
 
@@ -239,13 +257,12 @@ public class InternalMessagingController {
     }
 
     @DeleteMapping("/messages/{msgId}/reactions/{emoji}")
-    @Transactional
     public Map<String, String> removeReaction(@PathVariable String msgId,
                                                @PathVariable String emoji,
                                                @RequestParam String workspaceId) {
         rbac.require(authenticatedUser.id(), workspaceId, "work_write");
         requireMessageInWorkspace(msgId, workspaceId);
-        reactionRepo.deleteByMessageIdAndUserIdAndEmoji(msgId, authenticatedUser.id(), emoji);
+        mutationService.removeReaction(msgId, authenticatedUser.id(), emoji);
         return Map.of("status", "removed");
     }
 
@@ -302,13 +319,12 @@ public class InternalMessagingController {
     }
 
     @DeleteMapping("/messages/{msgId}/pin")
-    @Transactional
     public Map<String, String> unpinMessage(@PathVariable String msgId,
                                              @RequestParam String workspaceId,
                                              @RequestParam String conversationId) {
         rbac.require(authenticatedUser.id(), workspaceId, "work_write");
         requireConversationInWorkspace(conversationId, workspaceId);
-        pinRepo.deleteByConversationIdAndMessageIdAndWorkspaceId(conversationId, msgId, workspaceId);
+        mutationService.unpinMessage(conversationId, msgId, workspaceId);
         return Map.of("status", "unpinned");
     }
 

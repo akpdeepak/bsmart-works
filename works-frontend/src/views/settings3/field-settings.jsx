@@ -1,6 +1,6 @@
 import { Table } from '@/components/works/atoms/table';
 import { useRef, useState } from 'react';
-import { Check, Eye, LayoutDashboard, FileText, GripVertical } from 'lucide-react';
+import { ArrowDown, ArrowUp, Check, Eye, LayoutDashboard, FileText, GripVertical } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { TypeBadge } from '@/components/works/work-item-type';
@@ -123,6 +123,14 @@ export function FieldLayoutSettings({
   const getLayoutOrder = (itemType) =>
     layoutOrders[itemType] ?? fieldDefs.map(fd => fd.id);
 
+  const moveField = (itemType, index, delta) => {
+    const target = index + delta;
+    const order = getLayoutOrder(itemType).slice();
+    if (target < 0 || target >= order.length) return;
+    const [moved] = order.splice(index, 1);
+    order.splice(target, 0, moved);
+    setLayoutOrders(prev => ({ ...prev, [itemType]: order }));
+  };
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
@@ -163,6 +171,7 @@ export function FieldLayoutSettings({
                     const visible = entry ? entry.visible !== false : true;
                     return (
                       <div key={fd.id}
+                        data-testid="field-layout-row"
                         draggable={true}
                         onDragStart={() => { fieldDragIdx.current = idx; }}
                         onDragOver={e => e.preventDefault()}
@@ -187,6 +196,28 @@ export function FieldLayoutSettings({
                         <span className={`text-xs font-medium px-2 py-0.5 rounded ${visible ? 'bg-semantic-success-surface text-semantic-success' : 'bg-neutral-100 dark:bg-neutral-600 text-neutral-600 dark:text-neutral-300'}`}>
                           {visible ? 'Visible' : 'Hidden'}
                         </span>
+                        <Button
+                          unstyled
+                          type="button"
+                          aria-label={`Move ${fd.name} up`}
+                          disabled={idx === 0}
+                          onClick={() => moveField(itemType, idx, -1)}
+                          onKeyDown={e => { if (e.key === 'ArrowUp') moveField(itemType, idx, -1); }}
+                          className="rounded p-1 text-neutral-600 hover:text-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 disabled:opacity-30"
+                        >
+                          <ArrowUp className="h-4 w-4" aria-hidden="true" />
+                        </Button>
+                        <Button
+                          unstyled
+                          type="button"
+                          aria-label={`Move ${fd.name} down`}
+                          disabled={idx === getLayoutOrder(itemType).length - 1}
+                          onClick={() => moveField(itemType, idx, 1)}
+                          onKeyDown={e => { if (e.key === 'Enter' || e.key === 'ArrowDown') moveField(itemType, idx, 1); }}
+                          className="rounded p-1 text-neutral-600 hover:text-brand-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40 disabled:opacity-30"
+                        >
+                          <ArrowDown className="h-4 w-4" aria-hidden="true" />
+                        </Button>
                         <span className="text-xs text-neutral-600 dark:text-neutral-400">#{idx + 1}</span>
                       </div>
                     );

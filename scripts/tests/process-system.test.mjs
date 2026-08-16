@@ -225,6 +225,8 @@ test('CI has one integration job and one stable merge gate', () => {
   assert.equal((workflow.match(/^  merge-gate:/gm) ?? []).length, 1);
   assert.match(workflow, /name: merge-gate/);
   assert.match(workflow, /classify-changes\.mjs/);
+  const policyJob = workflow.slice(workflow.indexOf('\n  policy:'), workflow.indexOf('\n  commit-lint:'));
+  assert.match(policyJob, /npm ci --prefix works-frontend/);
 });
 
 test('one manifest-driven verifier owns changed, full, and release profiles', () => {
@@ -251,6 +253,7 @@ test('unified verification preserves product-quality and completed-EPIC gates', 
     'epic-06-completion.mjs',
     'epic-07-completion.mjs',
     'epic-08-completion.mjs',
+    'epics-09-15-completion.mjs',
   ]) {
     assert.match(manifest, new RegExp(script.replaceAll('.', '\\.')));
   }

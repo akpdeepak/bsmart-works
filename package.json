@@ -12,6 +12,7 @@
     "epic:6": "node scripts/epic-06-completion.mjs",
     "epic:7": "node scripts/epic-07-completion.mjs",
     "epic:8": "node scripts/epic-08-completion.mjs",
+    "epics:9-15": "node scripts/epics-09-15-completion.mjs",
     "quality-gates": "node scripts/quality-gates.mjs",
     "ai-rules": "node scripts/generate-ai-rules.mjs",
     "ai-rules:check": "node scripts/generate-ai-rules.mjs --check",

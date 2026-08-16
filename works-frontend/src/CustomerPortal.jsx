@@ -207,24 +207,24 @@ export default function CustomerPortal() {
     loadRequests();
   }, [token, loadHome, loadRequests]);
 
-  if (!session) return <LoginScreen onLogin={setSession} />;
-
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await pApi().post('/portal/auth/logout');
-    } catch (e) {
+    } catch {
       // Best effort; proceed to local clearing even if network fails
     } finally {
       localStorage.removeItem(PORTAL_KEY);
       setSession(null);
     }
-  };
+  }, [pApi]);
 
   useEffect(() => {
     const onAuthExpired = () => logout();
     window.addEventListener('auth-expired', onAuthExpired);
     return () => window.removeEventListener('auth-expired', onAuthExpired);
-  }, []);
+  }, [logout]);
+
+  if (!session) return <LoginScreen onLogin={setSession} />;
 
   const go = (next) => {
     setView(next);

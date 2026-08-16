@@ -58,6 +58,17 @@ export function AiCommandBar({ workspaceId, onToast, onExecuted, triggerCount, t
     if (open && inputRef.current) inputRef.current.focus();
   }, [open]);
 
+  useEffect(() => {
+    const onShortcut = (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'j') {
+        event.preventDefault();
+        setOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onShortcut);
+    return () => window.removeEventListener('keydown', onShortcut);
+  }, []);
+
   const close = useCallback(() => {
     setOpen(false);
     setPlan(null);

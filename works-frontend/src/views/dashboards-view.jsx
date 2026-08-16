@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useState } from 'react';
 import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { LayoutDashboard, ArrowLeft, Puzzle } from 'lucide-react';
@@ -89,6 +90,16 @@ export default function DashboardsView({
   onConversationalDashboardSaved,
 }) {
   const { t } = useI18n();
+  useEffect(() => {
+    const onBeforeUnload = (e) => {
+      if (dashboardEditMode) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [dashboardEditMode]);
   // Gate the NL entry on ITS capability (conversational_dashboard), not "any AI" — most-restrictive
   // wins is already resolved server-side (RB-40 §2). Hidden entirely when off; the deterministic
   // NL→spec fallback still works server-side when AI is on but over budget/unavailable.

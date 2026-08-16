@@ -20,23 +20,23 @@ export function useServiceState(api, activeWorkspaceId, showToast, reportError) 
   const [formDesignerTypeId, setFormDesignerTypeId] = useState(null);
 
   function fetchServiceRequests(q = serviceQueue) {
-    api.raw(`/service/requests?workspaceId=${activeWorkspaceId}&queue=${q}`).then(r => r.json())
+    api.send(`/service/requests?workspaceId=${activeWorkspaceId}&queue=${q}`)
       .then(d => setServiceRequests(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function fetchServiceCustomers() {
-    api.raw(`/service/customers?workspaceId=${activeWorkspaceId}`).then(r => r.json())
+    api.send(`/service/customers?workspaceId=${activeWorkspaceId}`)
       .then(d => setServiceCustomers(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function fetchServiceTypes() {
-    api.raw(`/service/request-types?workspaceId=${activeWorkspaceId}`).then(r => r.json())
+    api.send(`/service/request-types?workspaceId=${activeWorkspaceId}`)
       .then(d => setServiceTypes(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function fetchServiceTiers() {
-    api.raw(`/service/sla-tiers?workspaceId=${activeWorkspaceId}`).then(r => r.json())
+    api.send(`/service/sla-tiers?workspaceId=${activeWorkspaceId}`)
       .then(d => setServiceTiers(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function fetchServiceCsat() {
-    api.raw(`/service/csat?workspaceId=${activeWorkspaceId}`).then(r => r.json())
+    api.send(`/service/csat?workspaceId=${activeWorkspaceId}`)
       .then(d => setServiceCsat(d)).catch(reportError);
   }
   function assignServiceRequest(id) {

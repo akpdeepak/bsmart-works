@@ -24,13 +24,13 @@ export function useDashboardsState(api, activeWorkspaceId, showToast, reportErro
   const [shareInfo, setShareInfo] = useState(null); // { id, token } when the share panel is open
 
   function fetchCustomDashboards() {
-    api.raw(`/dashboards`)
-      .then(r => r.json()).then(d => setCustomDashboards(Array.isArray(d) ? d : (d?.items || []))).catch(reportError);
+    api.send(`/dashboards`)
+      .then(d => setCustomDashboards(Array.isArray(d) ? d : (d?.items || []))).catch(reportError);
   }
 
   function openDashboard(id) {
-    api.raw(`/dashboards/${id}`)
-      .then(r => r.json()).then(d => {
+    api.send(`/dashboards/${id}`)
+      .then(d => {
         setSelectedDashboard(d); setDashboardEditMode(false); setShareInfo(null);
         setDashboardScope('PROJECT'); setDashboardTeamId(null); setDashboardAggregate(null);
       }).catch(reportError);
@@ -38,8 +38,8 @@ export function useDashboardsState(api, activeWorkspaceId, showToast, reportErro
 
   // Teams power the TEAM scope selector on dashboards.
   function fetchTeams() {
-    api.raw(`/teams?workspaceId=${activeWorkspaceId}`)
-      .then(r => r.json()).then(d => setTeams(Array.isArray(d) ? d : [])).catch(reportError);
+    api.send(`/teams?workspaceId=${activeWorkspaceId}`)
+      .then(d => setTeams(Array.isArray(d) ? d : [])).catch(reportError);
   }
 
   // Fetch the server-side scope aggregate for a dashboard. PROJECT uses the client-loaded
@@ -49,8 +49,8 @@ export function useDashboardsState(api, activeWorkspaceId, showToast, reportErro
     const qs = scope === 'TEAM'
       ? `scope=TEAM&teamId=${encodeURIComponent(teamId || '')}`
       : `scope=ORG&workspaceId=${activeWorkspaceId}`;
-    api.raw(`/insights/work-items?${qs}`)
-      .then(r => r.json()).then(d => setDashboardAggregate(d))
+    api.send(`/insights/work-items?${qs}`)
+      .then(d => setDashboardAggregate(d))
       .catch(() => { setDashboardAggregate(null); showToast('Could not load scoped data', 'error'); });
   }
 

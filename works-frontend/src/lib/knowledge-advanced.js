@@ -18,7 +18,7 @@ export const templatesClient = {
   update: (workspaceId, id, body) =>
     api.send(`/knowledge/templates/${encodeURIComponent(id)}?workspaceId=${ws(workspaceId)}`, { method: 'PUT', body }),
   remove: (workspaceId, id) =>
-    api.raw(`/knowledge/templates/${encodeURIComponent(id)}?workspaceId=${ws(workspaceId)}`, { method: 'DELETE' }),
+    api.send(`/knowledge/templates/${encodeURIComponent(id)}?workspaceId=${ws(workspaceId)}`, { method: 'DELETE' }),
 };
 
 export const collaborationClient = {
@@ -28,7 +28,7 @@ export const collaborationClient = {
     api.send(`/knowledge/articles/${encodeURIComponent(articleId)}/authors?workspaceId=${ws(workspaceId)}`,
       { method: 'POST', body: { userId, role } }),
   removeAuthor: (workspaceId, articleId, userId) =>
-    api.raw(`/knowledge/articles/${encodeURIComponent(articleId)}/authors/${encodeURIComponent(userId)}?workspaceId=${ws(workspaceId)}`,
+    api.send(`/knowledge/articles/${encodeURIComponent(articleId)}/authors/${encodeURIComponent(userId)}?workspaceId=${ws(workspaceId)}`,
       { method: 'DELETE' }),
 };
 

@@ -90,7 +90,7 @@ class WorkItemControllerAccessTest {
             wipLimits, mock(AutomationService.class), mock(FunnelService.class),
             readService, new ObjectMapper(),
             org.mockito.Mockito.mock(com.bcits.works.workitems.TeamSequenceGenerator.class), notifier,
-            org.mockito.Mockito.mock(com.bcits.works.projects.ProjectSequenceService.class));
+            org.mockito.Mockito.mock(com.bcits.works.projects.api.ProjectSequenceService.class));
     private final WorkItemEngagementService engagementService = new WorkItemEngagementService(
             jdbc, authenticatedUser, rbac, watcherService);
 

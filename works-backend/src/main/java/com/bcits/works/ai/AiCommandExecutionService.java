@@ -93,7 +93,10 @@ public class AiCommandExecutionService {
         w.setType(str(params.getOrDefault("type", "Task")));
         w.setPriority(str(params.getOrDefault("priority", "Medium")));
         w.setStatus("Todo");
-        w.setProjectId(projectId != null ? projectId : "PROJ-001");
+        if (projectId == null) {
+            return Map.of("action", type.name(), "ok", false, "error", "No projects found in this workspace to create an item.");
+        }
+        w.setProjectId(projectId);
         w.setCreatedBy(userId);
         w.setCreatedAt(OffsetDateTime.now());
         WorkItem saved = workItems.save(w);

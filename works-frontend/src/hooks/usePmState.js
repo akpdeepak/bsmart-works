@@ -29,18 +29,17 @@ export function usePmState(api, activeWorkspaceId, showToast, reportError) {
 
   function fetchRaidDashboard(pid) {
     if (!pid) return;
-    api.raw(`/raid-dashboard?projectId=${pid}`)
-      .then(r => r.json()).then(setRaidDashboard).catch(reportError);
+    api.send(`/raid-dashboard?projectId=${pid}`).then(setRaidDashboard).catch(reportError);
   }
-  function fetchRisks(pid)        { api.raw(`/risks?projectId=${pid}`).then(r => r.json()).then(d => setRisks(Array.isArray(d) ? d : [])).catch(reportError); }
-  function fetchAssumptions(pid)  { api.raw(`/assumptions?projectId=${pid}`).then(r => r.json()).then(d => setAssumptions(Array.isArray(d) ? d : [])).catch(reportError); }
-  function fetchPmIssues(pid)     { api.raw(`/pm-issues?projectId=${pid}`).then(r => r.json()).then(d => setPmIssues(Array.isArray(d) ? d : [])).catch(reportError); }
-  function fetchDependencies(pid) { api.raw(`/dependencies?projectId=${pid}`).then(r => r.json()).then(d => setDependencies(Array.isArray(d) ? d : [])).catch(reportError); }
-  function fetchDecisions(pid)    { api.raw(`/decisions?projectId=${pid}`).then(r => r.json()).then(d => setDecisions(Array.isArray(d) ? d : [])).catch(reportError); }
-  function fetchMeetings(pid)     { api.raw(`/meetings?projectId=${pid}`).then(r => r.json()).then(d => setMeetings(Array.isArray(d) ? d : [])).catch(reportError); }
-  function fetchActionItems(pid)  { api.raw(`/action-items?projectId=${pid}`).then(r => r.json()).then(d => setActionItems(Array.isArray(d) ? d : [])).catch(reportError); }
-  function fetchStakeholders(pid) { api.raw(`/stakeholders?projectId=${pid}`).then(r => r.json()).then(d => setStakeholders(Array.isArray(d) ? d : [])).catch(reportError); }
-  function fetchLessons(pid)      { api.raw(`/lessons-learned?projectId=${pid}`).then(r => r.json()).then(d => setLessonsLearned(Array.isArray(d) ? d : [])).catch(reportError); }
+  function fetchRisks(pid)        { api.send(`/risks?projectId=${pid}`).then(d => setRisks(Array.isArray(d) ? d : [])).catch(reportError); }
+  function fetchAssumptions(pid)  { api.send(`/assumptions?projectId=${pid}`).then(d => setAssumptions(Array.isArray(d) ? d : [])).catch(reportError); }
+  function fetchPmIssues(pid)     { api.send(`/pm-issues?projectId=${pid}`).then(d => setPmIssues(Array.isArray(d) ? d : [])).catch(reportError); }
+  function fetchDependencies(pid) { api.send(`/dependencies?projectId=${pid}`).then(d => setDependencies(Array.isArray(d) ? d : [])).catch(reportError); }
+  function fetchDecisions(pid)    { api.send(`/decisions?projectId=${pid}`).then(d => setDecisions(Array.isArray(d) ? d : [])).catch(reportError); }
+  function fetchMeetings(pid)     { api.send(`/meetings?projectId=${pid}`).then(d => setMeetings(Array.isArray(d) ? d : [])).catch(reportError); }
+  function fetchActionItems(pid)  { api.send(`/action-items?projectId=${pid}`).then(d => setActionItems(Array.isArray(d) ? d : [])).catch(reportError); }
+  function fetchStakeholders(pid) { api.send(`/stakeholders?projectId=${pid}`).then(d => setStakeholders(Array.isArray(d) ? d : [])).catch(reportError); }
+  function fetchLessons(pid)      { api.send(`/lessons-learned?projectId=${pid}`).then(d => setLessonsLearned(Array.isArray(d) ? d : [])).catch(reportError); }
 
   function pmCreate(type, payload) {
     const endpoints = {
@@ -54,8 +53,8 @@ export function usePmState(api, activeWorkspaceId, showToast, reportError) {
     const body = type === 'stakeholder'
       ? { ...payload, name: payload.name || payload.title, notes: payload.notes || payload.description }
       : payload;
-    api.raw(`/${ep}`, { method: 'POST', body: JSON.stringify({ ...body, projectId: pmProjectId, workspaceId: activeWorkspaceId }) })
-      .then(r => r.json()).then(() => {
+    api.send(`/${ep}`, { method: 'POST', body: JSON.stringify({ ...body, projectId: pmProjectId, workspaceId: activeWorkspaceId }) })
+      .then(() => {
         setPmFormOpen(null); setPmForm({});
         if (type === 'risk')        { fetchRisks(pmProjectId); fetchRaidDashboard(pmProjectId); }
         if (type === 'assumption')  { fetchAssumptions(pmProjectId); fetchRaidDashboard(pmProjectId); }
@@ -77,7 +76,7 @@ export function usePmState(api, activeWorkspaceId, showToast, reportError) {
     };
     const ep = endpoints[type];
     if (!ep) return;
-    api.raw(`/${ep}/${id}`, { method: 'DELETE' }).then(() => {
+    api.send(`/${ep}/${id}`, { method: 'DELETE' }).then(() => {
       if (type === 'risk')        { fetchRisks(pmProjectId); fetchRaidDashboard(pmProjectId); }
       if (type === 'assumption')  { fetchAssumptions(pmProjectId); fetchRaidDashboard(pmProjectId); }
       if (type === 'issue')       { fetchPmIssues(pmProjectId); fetchRaidDashboard(pmProjectId); }

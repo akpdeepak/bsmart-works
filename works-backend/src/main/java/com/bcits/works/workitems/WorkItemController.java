@@ -79,10 +79,12 @@ public class WorkItemController {
         + " Response carries X-Total-Count (full filtered count) and X-Has-More (boolean).")
     @GetMapping
     public ResponseEntity<List<WorkItem>> getAllWorkItems(
+                                          @RequestParam String workspaceId,
+                                          @RequestParam(required = false) String projectId,
                                           @RequestParam(required = false) String parentId,
                                           @RequestParam(defaultValue = "0") int page,
                                           @RequestParam(defaultValue = "200") int size) {
-        return readService.getAllWorkItems(parentId, page, size);
+        return readService.getAllWorkItems(workspaceId, projectId, parentId, page, size);
     }
 
     // Trash — soft-deleted items recoverable within 30 days. Must be declared before /{id} so the
@@ -130,9 +132,10 @@ public class WorkItemController {
     }
 
     @GetMapping("/backlog")
-    public List<WorkItem> getBacklog(@RequestParam(required = false) String projectId,
+    public List<WorkItem> getBacklog(@RequestParam String workspaceId,
+                                     @RequestParam(required = false) String projectId,
                                      @RequestParam(defaultValue = "300") int size) {
-        return readService.getBacklog(projectId, size);
+        return readService.getBacklog(workspaceId, projectId, size);
     }
 
     @PutMapping("/backlog/reorder")

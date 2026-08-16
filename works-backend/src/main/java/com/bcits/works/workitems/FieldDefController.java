@@ -83,7 +83,7 @@ public class FieldDefController {
         // RBAC or workspace check at all, so any authenticated caller could create a field def in
         // any workspace. The other methods here scope by existing.getWorkspaceId(); create scopes
         // by the workspaceId on the incoming record.
-        rbac.require(authenticatedUser.id(), fd.getWorkspaceId(), "view_items");
+        rbac.require(authenticatedUser.id(), fd.getWorkspaceId(), "manage_fields");
         fd.setId("FD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         fd.setCreatedAt(OffsetDateTime.now());
         if (fd.getConfig() == null) fd.setConfig("{}");
@@ -93,7 +93,7 @@ public class FieldDefController {
     @PutMapping("/{id}")
     public FieldDef update(@PathVariable String id, @Valid @RequestBody FieldDef updated) {
         FieldDef existing = fieldDefRepo.findById(id).orElseThrow();
-        rbac.require(authenticatedUser.id(), existing.getWorkspaceId(), "view_items");
+        rbac.require(authenticatedUser.id(), existing.getWorkspaceId(), "manage_fields");
         return fieldDefRepo.findById(id).map(fd -> {
             fd.setName(updated.getName());
             fd.setFieldType(updated.getFieldType());
@@ -109,7 +109,7 @@ public class FieldDefController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
         FieldDef existing = fieldDefRepo.findById(id).orElseThrow();
-        rbac.require(authenticatedUser.id(), existing.getWorkspaceId(), "view_items");
+        rbac.require(authenticatedUser.id(), existing.getWorkspaceId(), "manage_fields");
         fieldDefRepo.deleteById(id);
         return ResponseEntity.noContent().build();
     }

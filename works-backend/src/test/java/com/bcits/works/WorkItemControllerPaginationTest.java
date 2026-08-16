@@ -81,13 +81,13 @@ class WorkItemControllerPaginationTest {
         // Act: call with no explicit size — the default kicks in.
         @SuppressWarnings("unchecked")
         ResponseEntity<List<WorkItem>> response =
-                (ResponseEntity<List<WorkItem>>) controller.getAllWorkItems(null, 0, 200);
+                (ResponseEntity<List<WorkItem>>) controller.getAllWorkItems("WS-1", null, null, 0, 200);
 
         // Assert: the SQL sent to jdbc must contain LIMIT 200 (the new default), not LIMIT 50.
         verify(jdbc).query(
                 org.mockito.ArgumentMatchers.contains("LIMIT"),
                 any(RowMapper.class),
-                eq(CALLER), eq(200), eq(0));
+                eq(CALLER), eq("WS-1"), eq(200), eq(0));
     }
 
     // ── X-Total-Count header ─────────────────────────────────────────────────────
@@ -99,7 +99,7 @@ class WorkItemControllerPaginationTest {
 
         @SuppressWarnings("unchecked")
         ResponseEntity<List<WorkItem>> response =
-                (ResponseEntity<List<WorkItem>>) controller.getAllWorkItems(null, 0, 200);
+                (ResponseEntity<List<WorkItem>>) controller.getAllWorkItems("WS-1", null, null, 0, 200);
 
         assertThat(response.getHeaders().getFirst("X-Total-Count")).isEqualTo("319");
     }
@@ -113,7 +113,7 @@ class WorkItemControllerPaginationTest {
 
         @SuppressWarnings("unchecked")
         ResponseEntity<List<WorkItem>> response =
-                (ResponseEntity<List<WorkItem>>) controller.getAllWorkItems(null, 0, 200);
+                (ResponseEntity<List<WorkItem>>) controller.getAllWorkItems("WS-1", null, null, 0, 200);
 
         assertThat(response.getHeaders().getFirst("X-Has-More")).isEqualTo("false");
     }
@@ -125,7 +125,7 @@ class WorkItemControllerPaginationTest {
 
         @SuppressWarnings("unchecked")
         ResponseEntity<List<WorkItem>> response =
-                (ResponseEntity<List<WorkItem>>) controller.getAllWorkItems(null, 0, 200);
+                (ResponseEntity<List<WorkItem>>) controller.getAllWorkItems("WS-1", null, null, 0, 200);
 
         assertThat(response.getHeaders().getFirst("X-Has-More")).isEqualTo("true");
     }
@@ -137,29 +137,29 @@ class WorkItemControllerPaginationTest {
         stubCountQuery(5L);
         stubListQuery(List.of());
 
-        controller.getAllWorkItems(null, 0, 200);
+        controller.getAllWorkItems("WS-1", null, null, 0, 200);
 
         // The SQL must contain DESC (newest-first).
         verify(jdbc).query(
                 org.mockito.ArgumentMatchers.contains("created_at DESC"),
                 any(RowMapper.class),
-                eq(CALLER), eq(200), eq(0));
+                eq(CALLER), eq("WS-1"), eq(200), eq(0));
     }
 
     // ── backlog LIMIT ────────────────────────────────────────────────────────────
 
     @Test
     void getBacklog_queryContainsLimit() {
-        when(jdbc.query(anyString(), any(RowMapper.class), any()))
+        when(jdbc.query(anyString(), any(RowMapper.class), any(), any()))
                 .thenReturn(List.of());
 
-        controller.getBacklog(null, 300);
+        controller.getBacklog("WS-1", null, 300);
 
         // The SQL must now contain LIMIT (it was unbounded before this fix).
         verify(jdbc).query(
                 org.mockito.ArgumentMatchers.contains("LIMIT"),
                 any(RowMapper.class),
-                eq(CALLER));
+                eq(CALLER), eq("WS-1"));
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────────
@@ -169,7 +169,7 @@ class WorkItemControllerPaginationTest {
         when(jdbc.queryForObject(
                 anyString(),
                 eq(Long.class),
-                eq(CALLER)))
+                eq(CALLER), eq("WS-1")))
             .thenReturn(count);
     }
 
@@ -178,7 +178,7 @@ class WorkItemControllerPaginationTest {
         when(jdbc.query(
                 anyString(),
                 any(RowMapper.class),
-                eq(CALLER), any(Integer.class), any(Integer.class)))
+                eq(CALLER), eq("WS-1"), any(Integer.class), any(Integer.class)))
             .thenReturn(items);
     }
 

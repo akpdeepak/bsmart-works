@@ -516,7 +516,7 @@ function ReportTab({ report }) {
 function AuditTab({ workspaceId, audit, toast }) {
   async function exportCsv() {
     try {
-      const res = await api.raw(`/sla/audit/export?workspaceId=${workspaceId}`);
+      const res = await api.send(`/sla/audit/export?workspaceId=${workspaceId}`);
       if (!res.ok) throw new Error(`Export failed (${res.status})`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);

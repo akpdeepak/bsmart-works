@@ -45,11 +45,7 @@ function scopedActionPath(path, workspaceId) {
   return `${path}${join}workspaceId=${encodeURIComponent(workspaceId)}`;
 }
 
-async function requireOk(path, options) {
-  const response = await api.raw(path, options);
-  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
-  return response;
-}
+// Removed requireOk since api.send automatically throws on failure
 
 export default function NotificationsView({
   loading = false,
@@ -88,8 +84,9 @@ export default function NotificationsView({
   async function markDone(item) {
     setBusyKey(item.key);
     try {
-      await requireOk(`/inbox/done?workspaceId=${encodeURIComponent(activeWorkspaceId)}`, {
-        method: 'POST', body: JSON.stringify({ itemKey: item.key }),
+      await api.send(`/inbox/done?workspaceId=${encodeURIComponent(activeWorkspaceId)}`, {
+        method: 'POST',
+        body: JSON.stringify({ itemKey: item.key }),
       });
       removeItem(item.key);
     } catch (error) {
@@ -102,7 +99,7 @@ export default function NotificationsView({
   async function snooze(item) {
     setBusyKey(item.key);
     try {
-      await requireOk(`/inbox/snooze?workspaceId=${encodeURIComponent(activeWorkspaceId)}`, {
+      await api.send(`/inbox/snooze?workspaceId=${encodeURIComponent(activeWorkspaceId)}`, {
         method: 'POST',
         body: JSON.stringify({ itemKey: item.key, until: snoozeUntil(snoozeChoice[item.key] || '1') }),
       });
@@ -223,7 +220,7 @@ export default function NotificationsView({
 
   async function markActivityRead(notification) {
     try {
-      await requireOk(`/notifications/${notification.id}/read?workspaceId=${encodeURIComponent(activeWorkspaceId)}`, {
+      await api.send(`/notifications/${notification.id}/read?workspaceId=${encodeURIComponent(activeWorkspaceId)}`, {
         method: 'PUT',
       });
       setNotifications((current) => current.map((item) => (
@@ -236,7 +233,7 @@ export default function NotificationsView({
 
   async function markAllActivityRead() {
     try {
-      await requireOk(`/notifications/mark-all-read?workspaceId=${encodeURIComponent(activeWorkspaceId)}`, {
+      await api.send(`/notifications/mark-all-read?workspaceId=${encodeURIComponent(activeWorkspaceId)}`, {
         method: 'PUT',
       });
       setNotifications((current) => current.map((item) => ({ ...item, read: true })));

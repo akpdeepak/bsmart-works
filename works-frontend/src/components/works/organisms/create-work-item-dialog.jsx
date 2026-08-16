@@ -476,7 +476,7 @@ function CreateWorkItemDialogInner({ onClose, onSubmit, projects, users, workIte
       type: typeKey,
       tags,
       priority: formData.priority ?? 'MEDIUM',
-      projectId: formData.projectId ?? (projects?.[0]?.id ?? 'PROJ-001'),
+      projectId: formData.projectId ?? (projects?.[0]?.id ?? null),
     });
     onClose();
   };

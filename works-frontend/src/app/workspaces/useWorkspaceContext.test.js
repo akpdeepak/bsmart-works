@@ -34,7 +34,7 @@ describe('useWorkspaceContext', () => {
 
   it('resolves the first authorized membership instead of inventing a default tenant', async () => {
     const api = {
-      raw: vi.fn().mockResolvedValue({ json: async () => [{ id: 'WS-A', name: 'Alpha' }] }),
+      send: vi.fn().mockResolvedValue([{ id: 'WS-A', name: 'Alpha' }]),
     };
     const { result } = renderHook(() => useWorkspaceContext(api, { id: 'USR-1' }));
 
@@ -46,7 +46,7 @@ describe('useWorkspaceContext', () => {
 
   it('rejects a workspace selection outside the loaded membership list', async () => {
     const api = {
-      raw: vi.fn().mockResolvedValue({ json: async () => [{ id: 'WS-A', name: 'Alpha' }] }),
+      send: vi.fn().mockResolvedValue([{ id: 'WS-A', name: 'Alpha' }]),
     };
     const { result } = renderHook(() => useWorkspaceContext(api, { id: 'USR-1' }));
     await waitFor(() => expect(result.current.ready).toBe(true));
@@ -59,10 +59,10 @@ describe('useWorkspaceContext', () => {
   });
 
   it('does not issue workspace requests for a signed-out session', () => {
-    const api = { raw: vi.fn() };
+    const api = { send: vi.fn() };
     const { result } = renderHook(() => useWorkspaceContext(api, null));
 
-    expect(api.raw).not.toHaveBeenCalled();
+    expect(api.send).not.toHaveBeenCalled();
     expect(result.current.activeWorkspaceId).toBe('');
     expect(result.current.ready).toBe(false);
   });

@@ -86,7 +86,7 @@ export default function PmView({
   }
   const saveMeetingNote = (section, content) => {
     setNoteStatus(s => ({ ...s, [section]: 'saving' }));
-    api.raw(`/meetings/${selectedMeeting.id}/notes/${section}`, {
+    api.send(`/meetings/${selectedMeeting.id}/notes/${section}`, {
       method: 'PUT',
       body: JSON.stringify({ content }),
     })
@@ -292,7 +292,7 @@ export default function PmView({
                 : <div className="space-y-3">
                     {meetings.map(m => (
                       <Button unstyled type="button" key={m.id} className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl p-5 cursor-pointer hover:shadow-sm transition-shadow w-full text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-navy-tint/40"
-                        onClick={() => { setSelectedMeeting(m); setPmTab('meeting-detail'); api.raw(`/meetings/${m.id}`).then(r => r.json()).then(d => setMeetingNotes(d.notes || [])); }}>
+                        onClick={() => { setSelectedMeeting(m); setPmTab('meeting-detail'); api.send(`/meetings/${m.id}`).then(d => setMeetingNotes(d.notes || [])); }}>
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">

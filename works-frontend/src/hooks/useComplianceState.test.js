@@ -21,7 +21,7 @@ describe('useComplianceState', () => {
 
     act(() => result.current.fetchComplianceDashboard());
 
-    await waitFor(() => expect(api.raw).toHaveBeenCalledWith(
+    await waitFor(() => expect(api.send).toHaveBeenCalledWith(
       '/compliance/dashboard?workspaceId=WS%20customer%2Fone',
     ));
   });
@@ -63,7 +63,7 @@ describe('useComplianceState', () => {
       result.current.exportComplianceAudit();
     });
 
-    expect(api.raw).not.toHaveBeenCalled();
+    expect(api.send).not.toHaveBeenCalled();
     expect(api.send).not.toHaveBeenCalled();
   });
 });

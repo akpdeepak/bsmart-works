@@ -64,6 +64,7 @@ public class TeamController {
     @PostMapping
     public Team create(@Valid @RequestBody Team team) {
         String userId = authenticatedUser.id();
+        rbac.require(userId, team.getWorkspaceId(), "manage_projects");
         Team saved = teamRepository.save(teamService.prepareNew(team));
         eventService.record(saved.getId(), "TEAM_CREATED", userId, "{}");
         return saved;
@@ -72,7 +73,7 @@ public class TeamController {
     @PutMapping("/{id}")
     public Team update(@PathVariable String id, @Valid @RequestBody Team updated) {
         Team existing = teamRepository.findById(id).orElseThrow();
-        rbac.require(authenticatedUser.id(), existing.getWorkspaceId(), "view_items");
+        rbac.require(authenticatedUser.id(), existing.getWorkspaceId(), "manage_projects");
         return teamRepository.findById(id)
             .map(t -> teamRepository.save(teamService.applyUpdate(t, updated)))
             .orElseThrow();
@@ -82,7 +83,7 @@ public class TeamController {
     public ResponseEntity<Void> delete(@PathVariable String id) {
         String userId = authenticatedUser.id();
         Team existing = teamRepository.findById(id).orElseThrow();
-        rbac.require(userId, existing.getWorkspaceId(), "view_items");
+        rbac.require(userId, existing.getWorkspaceId(), "manage_projects");
         teamRepository.deleteById(id);
         eventService.record(id, "TEAM_DELETED", userId, "{}");
         return ResponseEntity.noContent().build();

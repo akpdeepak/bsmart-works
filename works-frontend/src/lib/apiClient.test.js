@@ -1,11 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { api, apiRaw } from './apiClient';
 
-// Builds a fake fetch Response with the given ok/status/json payload.
 function fakeResponse({ ok = true, status = 200, body = {}, throwOnJson = false } = {}) {
   return {
     ok,
     status,
+    headers: { get: () => 'application/json' },
+    text: throwOnJson
+      ? () => Promise.reject(new Error('not text'))
+      : () => Promise.resolve(body ? JSON.stringify(body) : ''),
     json: throwOnJson
       ? () => Promise.reject(new Error('not json'))
       : () => Promise.resolve(body),

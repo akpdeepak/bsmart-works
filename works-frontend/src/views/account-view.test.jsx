@@ -66,9 +66,8 @@ describe('AccountView', () => {
     expect(handleMfaEnroll).toHaveBeenCalledOnce();
   });
 
-  it('walks the MFA confirm step once enrollment starts, gating Activate on a 6-digit code', () => {
-    renderView({ mfaSetup: { otpAuthUri: 'otpauth://totp/x', secret: 'ABC123SECRET' } });
-    expect(screen.getByAltText('TOTP QR Code')).toBeInTheDocument();
+  it('walks the MFA confirm step once enrollment starts, gating Activate on a 6-digit code', async () => {
+    renderView({ mfaSetup: { otpAuthUri: 'otpauth://totp/x', secret: 'ABC123SECRET' }, mfaSetupCode: '' });
     expect(screen.getByText('ABC123SECRET')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Activate MFA' })).toBeDisabled();
   });

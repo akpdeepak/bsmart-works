@@ -25,8 +25,8 @@ export default function OperatingModelView({ workspaceId, api, onToast }) {
   const loadPolicies = useCallback(() => {
     setLoading(true);
     setError(null);
-    api.raw(`/workspaces/${workspaceId}/operating-model`)
-      .then(r => r.json())
+    api.send(`/workspaces/${workspaceId}/operating-model`)
+      
       .then(data => {
         setPolicies(Array.isArray(data) ? data : []);
       })
@@ -43,7 +43,7 @@ export default function OperatingModelView({ workspaceId, api, onToast }) {
 
   function savePolicy(userType, resourceType, actionName, allowed) {
     const payload = { userType, resourceType, actionName, allowed };
-    api.raw(`/workspaces/${workspaceId}/operating-model`, {
+    api.send(`/workspaces/${workspaceId}/operating-model`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)

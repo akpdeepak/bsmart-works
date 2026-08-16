@@ -191,8 +191,14 @@ public class InternalMessagingControllerTest {
         when(conversationRepo.findById("c-1")).thenReturn(Optional.of(conv));
 
         // Two messages in the conversation
-        ChatMessage m1 = new ChatMessage(); m1.setId("m-1"); m1.setBody("Let's ship next Friday."); m1.setSenderType("AGENT");
-        ChatMessage m2 = new ChatMessage(); m2.setId("m-2"); m2.setBody("Agreed, I'll update the milestone."); m2.setSenderType("AGENT");
+        ChatMessage m1 = new ChatMessage();
+ m1.setId("m-1");
+ m1.setBody("Let's ship next Friday.");
+ m1.setSenderType("AGENT");
+        ChatMessage m2 = new ChatMessage();
+ m2.setId("m-2");
+ m2.setBody("Agreed, I'll update the milestone.");
+ m2.setSenderType("AGENT");
         when(messageRepo.findByConversationIdOrderByCreatedAtAsc("c-1")).thenReturn(List.of(m1, m2));
 
         // AI service returns empty (unavailable / budget exhausted)
@@ -233,10 +239,14 @@ public class InternalMessagingControllerTest {
         when(authUser.id()).thenReturn("u-1");
 
         ChatConversation conv = new ChatConversation();
-        conv.setId("c-1"); conv.setWorkspaceId("ws-1");
+        conv.setId("c-1");
+ conv.setWorkspaceId("ws-1");
         when(conversationRepo.findById("c-1")).thenReturn(Optional.of(conv));
 
-        ChatMessage m1 = new ChatMessage(); m1.setId("m-1"); m1.setBody("Alice will write the test plan by Thursday."); m1.setSenderType("AGENT");
+        ChatMessage m1 = new ChatMessage();
+ m1.setId("m-1");
+ m1.setBody("Alice will write the test plan by Thursday.");
+ m1.setSenderType("AGENT");
         when(messageRepo.findByConversationIdOrderByCreatedAtAsc("c-1")).thenReturn(List.of(m1));
 
         when(aiService.extractActionItems(anyString(), anyString(), any()))

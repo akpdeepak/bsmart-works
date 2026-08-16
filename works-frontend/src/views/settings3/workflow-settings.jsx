@@ -41,15 +41,15 @@ export default function WorkflowSettings({
         <h2 className="font-semibold text-neutral-900 dark:text-neutral-100">Workflow Definitions</h2>
         <Button variant="action" onClick={() => {
           const name = 'New Workflow ' + (workflows.length + 1);
-          api.raw(`/workflows`, { method: 'POST', body: JSON.stringify({ name, workspaceId: activeWorkspaceId, isDefault: false }) })
-            .then(r => r.json()).then(() => fetchWorkflows());
+          api.send(`/workflows`, { method: 'POST', body: JSON.stringify({ name, workspaceId: activeWorkspaceId, isDefault: false }) })
+            .then(() => fetchWorkflows());
         }}>+ New Workflow</Button>
       </div>
       {workflows.length === 0
         ? <EmptyState icon={Settings} title="No workflows yet" subtitle="Create a workflow to define statuses and transitions for your work items."
             action={<Button variant="action" onClick={() => {
-              api.raw(`/workflows`, { method: 'POST', body: JSON.stringify({ name: 'Default Workflow', workspaceId: activeWorkspaceId, isDefault: true }) })
-                .then(r => r.json()).then(() => fetchWorkflows());
+              api.send(`/workflows`, { method: 'POST', body: JSON.stringify({ name: 'Default Workflow', workspaceId: activeWorkspaceId, isDefault: true }) })
+                .then(() => fetchWorkflows());
             }}>Create default workflow</Button>} />
         : <div className="space-y-3">
             {workflows.map(wf => {
@@ -73,7 +73,7 @@ export default function WorkflowSettings({
                     </div>
                     <div className="flex gap-3 items-center" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()} role="none">
                       <span className="font-mono text-xs text-neutral-300">{wf.id}</span>
-                      <Button unstyled onClick={() => api.raw(`/workflows/${wf.id}`, { method: 'DELETE' }).then(() => { fetchWorkflows(); if (expandedWorkflowId === wf.id) setExpandedWorkflowId(null); })}
+                      <Button unstyled onClick={() => api.send(`/workflows/${wf.id}`, { method: 'DELETE' }).then(() => { fetchWorkflows(); if (expandedWorkflowId === wf.id) setExpandedWorkflowId(null); })}
                         className="text-xs text-semantic-danger hover:underline">Delete</Button>
                     </div>
                   </div>
@@ -102,7 +102,7 @@ export default function WorkflowSettings({
                                     reordered.splice(fromIdx, 1);
                                     reordered.splice(toIdx, 0, fromId);
                                     const order = reordered.map((id, pos) => ({ id, position: pos }));
-                                    api.raw(`/workflows/${wf.id}/statuses/reorder`, {
+                                    api.send(`/workflows/${wf.id}/statuses/reorder`, {
                                       method: 'PUT',
                                       headers: { 'Content-Type': 'application/json' },
                                       body: JSON.stringify(order),
@@ -155,7 +155,7 @@ export default function WorkflowSettings({
                                   const postFunctions = (() => { try { return JSON.parse(t.postFunctions || '[]'); } catch { return []; } })();
                                   const totalRules = conditions.length + validators.length + postFunctions.length;
                                   const saveRules = (newConds, newVals, newPfs) => {
-                                    api.raw(`/workflows/${wf.id}/transitions/${t.id}`, {
+                                    api.send(`/workflows/${wf.id}/transitions/${t.id}`, {
                                       method: 'PUT',
                                       headers: { 'Content-Type': 'application/json' },
                                       body: JSON.stringify({

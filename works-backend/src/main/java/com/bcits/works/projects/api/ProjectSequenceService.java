@@ -1,7 +1,5 @@
-package com.bcits.works.projects;
+package com.bcits.works.projects.api;
 
-import com.bcits.works.projects.api.Project;
-import com.bcits.works.projects.api.ProjectRepository;
 import com.bcits.works.shared.ApiException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;

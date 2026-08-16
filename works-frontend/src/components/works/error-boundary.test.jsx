@@ -25,7 +25,7 @@ describe('ErrorBoundary', () => {
     );
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Reload' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reload Application' })).toBeInTheDocument();
     // no raw stack/message leaked to the user
     expect(screen.queryByText(/kaboom/)).not.toBeInTheDocument();
     spy.mockRestore();

@@ -33,13 +33,13 @@ export function useReportsState(api, activeWorkspaceId, showToast, reportError, 
   const [scheduleForm, setScheduleForm] = useState(EMPTY_SCHEDULE_FORM);
 
   function fetchReports() {
-    api.raw(`/reports`).then(r => r.json()).then(d => setReports(Array.isArray(d) ? d : (d?.items || []))).catch(reportError);
+    api.send(`/reports`).then(d => setReports(Array.isArray(d) ? d : (d?.items || []))).catch(reportError);
   }
   function fetchReportTemplates() {
-    api.raw(`/reports/templates`).then(r => r.json()).then(d => setReportTemplates(Array.isArray(d) ? d : [])).catch(reportError);
+    api.send(`/reports/templates`).then(d => setReportTemplates(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function openReport(id) {
-    api.raw(`/reports/${id}`).then(r => r.json()).then(d => {
+    api.send(`/reports/${id}`).then(d => {
       setSelectedReport(d);
       try { setReportSections(JSON.parse(d.sections || '[]')); } catch { setReportSections([]); }
       setReportEditMode(false);
@@ -76,7 +76,7 @@ export function useReportsState(api, activeWorkspaceId, showToast, reportError, 
     fetchReportSchedules(reportId);
   }
   function fetchReportSchedules(reportId) {
-    api.raw(`/report-schedules?reportId=${reportId}`).then(r => r.json())
+    api.send(`/report-schedules?reportId=${reportId}`)
       .then(d => setReportSchedules(Array.isArray(d) ? d : [])).catch(reportError);
   }
   function createReportSchedule() {

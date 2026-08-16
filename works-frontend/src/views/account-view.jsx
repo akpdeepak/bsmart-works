@@ -4,6 +4,7 @@ import { PageLayout } from '@/components/works/templates/page-layout';
 import { Button } from '@/components/works/button';
 import { Avatar } from '@/components/works/atoms/avatar';
 import { LanguageSwitcher } from '@/components/works/organisms/language-switcher';
+import { QRCodeSVG } from 'qrcode.react';
 
 // Personal account surface — MFA enrollment, notification prefs, language. Tier VIEWER (1) so
 // every workspace member can reach it via the user menu, unlike the admin-only workspace view.
@@ -59,14 +60,13 @@ export default function AccountView({
         ) : (
           <div className="space-y-4">
             <div className="bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-lg p-4">
-              <p className="text-xs font-semibold text-neutral-600 mb-2">1. Scan this QR code with your authenticator app</p>
-              <div className="bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded p-3 text-center mb-3">
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(mfaSetup.otpAuthUri)}&size=160x160`}
-                  alt="TOTP QR Code" className="mx-auto w-40 h-40" />
+              <p className="text-xs font-semibold text-neutral-600 mb-2">1. Scan this QR code or enter the setup key into your authenticator app</p>
+              <div className="flex flex-col items-center justify-center bg-white dark:bg-neutral-700 border border-neutral-300 dark:border-neutral-600 rounded p-4 mb-3">
+                <div className="bg-white p-2 rounded shadow-sm mb-3">
+                  <QRCodeSVG value={mfaSetup.otpAuthUri} size={150} level="M" />
+                </div>
+                <code className="text-sm bg-neutral-100 dark:bg-neutral-800 dark:text-brand-orange px-3 py-2 rounded font-mono break-all tracking-widest">{mfaSetup.secret}</code>
               </div>
-              <p className="text-xs text-neutral-600 mb-1">Or enter this secret manually:</p>
-              <code className="text-xs bg-neutral-100 dark:bg-neutral-700 dark:text-neutral-200 px-2 py-1 rounded font-mono break-all">{mfaSetup.secret}</code>
             </div>
             <div>
               <p className="text-xs font-semibold text-neutral-600 mb-2">2. Enter the 6-digit code to confirm</p>

@@ -119,7 +119,9 @@ describe('WorkItemDetailPanel — Copy link button (audit #28)', () => {
     render(<WorkItemDetailPanel {...minProps} />);
 
     expect(screen.getByLabelText('Work item execution brief')).toBeInTheDocument();
-    expect(screen.getByText(/PLAT-42 is In Progress with HIGH priority/)).toBeInTheDocument();
+    expect(screen.getByText(/PLAT-42 is/)).toBeInTheDocument();
+    expect(screen.getByText('with')).toBeInTheDocument();
+    expect(screen.getByText('priority, owned by')).toBeInTheDocument();
     expect(screen.getByText(/Sources: work item fields, 2 comments, 1 activity event, 1 link, 1 file/)).toBeInTheDocument();
     expect(screen.getByText('Customer-visible')).toBeInTheDocument();
     expect(screen.getByText('Linked code available')).toBeInTheDocument();

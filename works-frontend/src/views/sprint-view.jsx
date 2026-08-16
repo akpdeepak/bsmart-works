@@ -83,7 +83,7 @@ export default function SprintView({
             </div>
             <div className="flex items-center gap-2 flex-wrap justify-end">
               <select value={activeSprint.id}
-                onChange={e => { const s = sprints.find(x => x.id === e.target.value); if (s) { setActiveSprint(s); fetchSprintItems(s.id); fetchSprintMetrics(s, selectedProjectId || 'PROJ-WORKS'); } }}
+                onChange={e => { const s = sprints.find(x => x.id === e.target.value); if (s) { setActiveSprint(s); fetchSprintItems(s.id); if (selectedProjectId) fetchSprintMetrics(s, selectedProjectId); } }}
                 className="text-sm border border-neutral-200 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-100 rounded-md px-2 py-1.5 focus:outline-none">
                 {sprints.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>

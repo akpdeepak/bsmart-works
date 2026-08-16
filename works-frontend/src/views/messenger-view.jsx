@@ -5,6 +5,7 @@ import {
   ChevronRight, X, Loader2, Lock, RefreshCw, Paperclip,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
+import { Select } from '@/components/works/atoms/select';
 import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { EmptyState } from '@/components/works/atoms/empty-state';
 import { PageLayout } from '@/components/works/templates/page-layout';
@@ -313,7 +314,7 @@ function AiPanel({ summary, drafts, onDismiss }) {
 
 // ─── Main view ───────────────────────────────────────────────────────────────
 
-export default function MessengerView({ workspaceId }) {
+export default function MessengerView({ workspaceId, users = [] }) {
   const { t } = useI18n();
   const [state, dispatch] = useReducer(reducer, initialState);
   const replyRef = useRef(null);
@@ -766,14 +767,7 @@ export default function MessengerView({ workspaceId }) {
                         disabled={sendBusy}
                         aria-label={t('messenger.composer.label', 'Message input')}
                       />
-                      <button
-                        className="absolute right-2.5 bottom-2.5 text-neutral-300 hover:text-neutral-500"
-                        aria-label={t('messenger.composer.attach', 'Attach file')}
-                        disabled
-                        title={t('messenger.composer.attachSoon', 'File attachments coming soon')}
-                      >
-                        <Paperclip className="h-4 w-4" />
-                      </button>
+
                     </div>
                     <Button
                       id="send-message-btn"
@@ -832,23 +826,22 @@ export default function MessengerView({ workspaceId }) {
               </div>
 
               <div className="p-3 border-t border-neutral-100">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full"
-                  id="add-participant-btn"
-                  onClick={() => {
-                    const userId = window.prompt(t('messenger.addParticipant.prompt', 'Enter user ID to add:'));
-                    if (userId?.trim()) {
-                      internalChatClient.addParticipant(workspaceId, activeId, userId.trim())
+                <Select
+                  value=""
+                  onChange={(e) => {
+                    const userId = e.target.value;
+                    if (userId) {
+                      internalChatClient.addParticipant(workspaceId, activeId, userId)
                         .then(() => loadThread(activeId))
                         .catch(() => { /* toast */ });
                     }
                   }}
                 >
-                  <Plus className="h-3.5 w-3.5 mr-1.5" />
-                  {t('messenger.action.addParticipant', 'Add member')}
-                </Button>
+                  <option value="" disabled>{t('messenger.action.addParticipant', 'Add member')}</option>
+                  {users.filter(u => !participants.some(p => p.id === u.id)).map(u => (
+                    <option key={u.id} value={u.id}>{u.fullName}</option>
+                  ))}
+                </Select>
               </div>
             </aside>
           )}

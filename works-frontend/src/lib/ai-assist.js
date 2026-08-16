@@ -31,9 +31,9 @@ export const aiAssistClient = {
    */
   async suggestDescription(workspaceId, { title, type }) {
     try {
-      return await api.send(`/ai/assist/suggest-description?workspaceId=${ws(workspaceId)}`, {
+      return await api.send(`/ai/generate?workspaceId=${ws(workspaceId)}`, {
         method: 'POST',
-        body: { title, type },
+        body: { prompt: `Suggest description for ${type}: ${title}` },
       });
     } catch {
       return { result: null, fallback: true };

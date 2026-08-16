@@ -56,7 +56,7 @@ export function OfflineBanner({ onSynced }) {
       <span>
         {online
           ? `${pending} change${pending === 1 ? '' : 's'} saved offline, waiting to sync.`
-          : 'You are offline. Changes are saved on this device and will sync when you reconnect.'}
+          : 'You are offline. Unsaved edits are queued locally and will sync when you reconnect.'}
       </span>
       {online && pending > 0 && (
         <button

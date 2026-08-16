@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { FileText, File as FileIcon, ArrowLeft, Puzzle } from 'lucide-react';
 import { AsyncBoundary } from '@/components/works/atoms/async-boundary';
 import { Button } from '@/components/works/button';
@@ -48,6 +49,16 @@ export default function ReportBuilderView({
   showToast,
 }) {
   const { t } = useI18n();
+  useEffect(() => {
+    const onBeforeUnload = (e) => {
+      if (reportEditMode) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [reportEditMode]);
   const onPressKey = (e) => { if (e.key === 'Enter' || e.key === ' ') e.currentTarget.click(); };
 
   if (loading && reports.length === 0 && !selectedReport) {

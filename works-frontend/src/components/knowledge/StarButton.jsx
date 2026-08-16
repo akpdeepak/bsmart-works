@@ -10,8 +10,12 @@ export function StarButton({ articleId, workspaceId }) {
 
   useEffect(() => {
     if (!articleId || !workspaceId) return;
-    api.send(`/articles/${articleId}/favorite?workspaceId=${encodeURIComponent(workspaceId)}`)
-      .then(() => setStarred(true))
+    api.send(`/articles/favorites?workspaceId=${encodeURIComponent(workspaceId)}`)
+      .then(res => {
+        const favs = Array.isArray(res) ? res : (res?.content || []);
+        const isFav = favs.some(f => f === articleId || f.id === articleId || f.articleId === articleId);
+        setStarred(isFav);
+      })
       .catch(() => setStarred(false));
   }, [articleId, workspaceId]);
 

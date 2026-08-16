@@ -43,7 +43,7 @@ function markItemsDone(blocks, texts) {
   });
 }
 
-export function CreateWorkItemsFromChecklist({ blocks, articleTitle, workspaceId, onBlocksChange }) {
+export function CreateWorkItemsFromChecklist({ blocks, articleTitle, workspaceId, projects, onBlocksChange }) {
   const items = uncheckedItems(blocks);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -58,11 +58,12 @@ export function CreateWorkItemsFromChecklist({ blocks, articleTitle, workspaceId
 
     const results = await Promise.allSettled(
       items.map(({ text }) =>
-        api.send('/api/v1/work-items', {
+        api.send('/work-items', {
           method: 'POST',
           body: {
             title: text,
             workspaceId,
+            projectId: projects?.length > 0 ? projects[0].id : null,
             type: 'TASK',
             description: `From meeting notes: ${articleTitle || 'Untitled'}`,
           },

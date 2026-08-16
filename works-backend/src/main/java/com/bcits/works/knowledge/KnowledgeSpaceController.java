@@ -112,6 +112,7 @@ public class KnowledgeSpaceController {
     @PostMapping
     public KnowledgeSpace createSpace(@Valid @RequestBody KnowledgeSpace space) {
         String userId = authenticatedUser.id();
+        rbac.require(userId, space.getWorkspaceId(), "manage_projects");
         space.setId("KS-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase());
         space.setVisibility(space.getVisibility() != null ? space.getVisibility() : "TEAM");
         space.setIcon(space.getIcon() != null ? space.getIcon() : "book");
@@ -127,7 +128,7 @@ public class KnowledgeSpaceController {
     public KnowledgeSpace updateSpace(@PathVariable String id, @Valid @RequestBody KnowledgeSpace updated) {
         String userId = authenticatedUser.id();
         KnowledgeSpace existing = knowledgeSpaceRepository.findById(id).orElseThrow();
-        rbac.require(userId, existing.getWorkspaceId(), "view_items");
+        rbac.require(userId, existing.getWorkspaceId(), "manage_projects");
         return knowledgeSpaceRepository.findById(id).map(s -> {
             s.setName(updated.getName());
             s.setDescription(updated.getDescription());
@@ -141,7 +142,7 @@ public class KnowledgeSpaceController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteSpace(@PathVariable String id) {
         KnowledgeSpace existing = knowledgeSpaceRepository.findById(id).orElseThrow();
-        rbac.require(authenticatedUser.id(), existing.getWorkspaceId(), "view_items");
+        rbac.require(authenticatedUser.id(), existing.getWorkspaceId(), "manage_projects");
         knowledgeSpaceRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }

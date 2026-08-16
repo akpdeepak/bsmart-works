@@ -17,7 +17,7 @@ describe('StarButton (KR-035)', () => {
   });
 
   it('shows as starred when article is favorited', async () => {
-    apiClient.api.send.mockResolvedValue({});
+    apiClient.api.send.mockResolvedValue(['A1']);
     render(<StarButton articleId="A1" workspaceId="WS1" />);
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /unstar article/i })).toHaveAttribute('aria-pressed', 'true');

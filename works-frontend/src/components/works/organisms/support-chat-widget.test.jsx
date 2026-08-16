@@ -128,11 +128,18 @@ describe('SupportChatWidget', () => {
     // We filter by delay (8000 ms = POLL_INTERVAL_MS) so RTL's polling loop does not overwrite
     // the captured callback with its own internal function.
     let capturedPollFn = null;
-    const intervalSpy = vi.spyOn(globalThis, 'setInterval').mockImplementation((fn, delay) => {
-      if (delay === 8000) capturedPollFn = fn; // the component's 8-second poll, not RTL's 50ms loop
-      return 999; // fake interval id
+    const realSetInterval = globalThis.setInterval;
+    const realClearInterval = globalThis.clearInterval;
+    const intervalSpy = vi.spyOn(globalThis, 'setInterval').mockImplementation((fn, delay, ...args) => {
+      if (delay === 8000) {
+        capturedPollFn = fn; // the component's 8-second poll, not RTL's 50ms loop
+        return 999; // fake component interval id
+      }
+      return realSetInterval(fn, delay, ...args);
     });
-    vi.spyOn(globalThis, 'clearInterval').mockImplementation(() => {});
+    const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval').mockImplementation((id) => {
+      if (id !== 999) realClearInterval(id);
+    });
 
     start.mockResolvedValue({
       conversation: { id: 'CHAT-99', status: 'ESCALATED' },
@@ -157,7 +164,7 @@ describe('SupportChatWidget', () => {
     // React has committed the conversation state update and the polling useEffect has re-run
     // with the new conversation.id, registering the 8-second setInterval callback.
     await screen.findByText('Connecting you with an agent.');
-    expect(capturedPollFn).not.toBeNull();
+    await waitFor(() => expect(capturedPollFn).not.toBeNull());
 
     // Fire the poll callback directly (simulates one interval tick).
     await act(async () => { capturedPollFn(); });
@@ -166,5 +173,6 @@ describe('SupportChatWidget', () => {
     expect(await screen.findByText('Hi, I am reviewing your case.')).toBeInTheDocument();
 
     intervalSpy.mockRestore();
+    clearIntervalSpy.mockRestore();
   });
 });

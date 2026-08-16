@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef, useReducer } from 'react';
 import {
   Send, MessageSquare, Plus, FileText, AlertCircle, Users, Hash,
-  Sparkles, CheckSquare, Pin, Smile, ThumbsUp, Heart, Zap,
-  ChevronRight, X, Loader2, Lock, RefreshCw, Paperclip,
+  Sparkles, CheckSquare, Pin, Smile, Zap,
+  ChevronRight, X, Loader2, Lock,
 } from 'lucide-react';
 import { Button } from '@/components/works/button';
 import { Select } from '@/components/works/atoms/select';
@@ -119,7 +119,7 @@ function ReactionBar({ workspaceId, messageId, reactions, onReacted }) {
   return (
     <div className="flex items-center gap-1 mt-1.5 flex-wrap">
       {Object.entries(grouped).map(([emoji, count]) => (
-        <button
+        <Button unstyled type="button"
           key={emoji}
           onClick={() => handleEmoji(emoji)}
           className="inline-flex items-center gap-0.5 text-xs bg-neutral-100 hover:bg-indigo-50 border border-neutral-200 hover:border-indigo-300 rounded-full px-2 py-0.5 transition-colors"
@@ -127,17 +127,17 @@ function ReactionBar({ workspaceId, messageId, reactions, onReacted }) {
         >
           <span>{emoji}</span>
           <span className="text-neutral-500 font-medium">{count}</span>
-        </button>
+        </Button>
       ))}
 
       <div className="relative">
-        <button
+        <Button unstyled type="button"
           onClick={() => setShowPicker(!showPicker)}
           className="inline-flex items-center gap-0.5 text-xs text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full px-1.5 py-0.5 transition-colors"
           aria-label={t('messenger.reaction.add', 'Add reaction')}
         >
           <Smile className="h-3 w-3" />
-        </button>
+        </Button>
         {showPicker && (
           <div
             className="absolute bottom-full left-0 mb-1 bg-white border border-neutral-200 rounded-xl shadow-xl p-2 flex gap-1 z-50"
@@ -145,14 +145,14 @@ function ReactionBar({ workspaceId, messageId, reactions, onReacted }) {
             aria-label={t('messenger.reaction.picker', 'Emoji picker')}
           >
             {QUICK_EMOJIS.map((e) => (
-              <button
+              <Button unstyled type="button"
                 key={e}
                 onClick={() => handleEmoji(e)}
                 className="text-lg hover:scale-125 transition-transform p-0.5"
                 aria-label={`React ${e}`}
               >
                 {e}
-              </button>
+              </Button>
             ))}
           </div>
         )}
@@ -247,13 +247,13 @@ function AiPanel({ summary, drafts, onDismiss }) {
                 ? t('messenger.ai.summary', 'AI Summary')
                 : t('messenger.ai.summaryFallback', 'Summary (AI unavailable)')}
             </h3>
-            <button
+            <Button unstyled type="button"
               onClick={() => onDismiss('summary')}
               aria-label={t('messenger.ai.dismiss', 'Dismiss')}
               className="text-indigo-400 hover:text-indigo-600"
             >
               <X className="h-3.5 w-3.5" />
-            </button>
+            </Button>
           </div>
           <p className="text-sm text-indigo-900 leading-relaxed">{summary.summary}</p>
           {!summary.aiAvailable && (
@@ -272,13 +272,13 @@ function AiPanel({ summary, drafts, onDismiss }) {
               {t('messenger.ai.actionDrafts', 'Suggested Action Items')}
               <Badge variant="warning" size="xs">{t('messenger.ai.reviewOnly', 'Review required')}</Badge>
             </h3>
-            <button
+            <Button unstyled type="button"
               onClick={() => onDismiss('drafts')}
               aria-label={t('messenger.ai.dismiss', 'Dismiss')}
               className="text-indigo-400 hover:text-indigo-600"
             >
               <X className="h-3.5 w-3.5" />
-            </button>
+            </Button>
           </div>
           {drafts.drafts.length === 0 ? (
             <p className="text-sm text-indigo-700 italic">
@@ -288,8 +288,7 @@ function AiPanel({ summary, drafts, onDismiss }) {
             <ul className="space-y-1.5">
               {drafts.drafts.map((d, i) => (
                 <li
-                  // eslint-disable-next-line react/no-array-index-key
-                  key={i}
+                  key={`${d.title}-${d.assignee || ''}-${d.dueHint || ''}-${i}`}
                   className="flex items-start gap-2 text-sm text-indigo-900"
                 >
                   <CheckSquare className="h-4 w-4 text-indigo-400 mt-0.5 shrink-0" />
@@ -465,7 +464,7 @@ export default function MessengerView({ workspaceId, users = [] }) {
       description={t('messenger.description', 'Internal team messaging and collaboration')}
     >
       <AsyncBoundary loading={listLoading} error={listError} onRetry={loadList}>
-        <div className="flex h-[calc(100vh-160px)] gap-0 mt-4 rounded-xl border border-neutral-200 bg-white overflow-hidden shadow-sm">
+        <div className="flex h-[calc(100vh-160px)] gap-0 mt-4 rounded-xl border border-neutral-200 bg-white overflow-hidden">
 
           {/* ── Conversation list ──────────────────────────────────────────── */}
           <aside
@@ -503,7 +502,7 @@ export default function MessengerView({ workspaceId, users = [] }) {
                       key={c.id}
                       role="listitem"
                     >
-                      <button
+                      <Button unstyled type="button"
                         className={`w-full text-left p-2.5 rounded-lg flex items-start gap-2.5 transition-all ${
                           isActive
                             ? 'bg-indigo-50 ring-1 ring-indigo-200'
@@ -534,7 +533,7 @@ export default function MessengerView({ workspaceId, users = [] }) {
                         {isActive && (
                           <ChevronRight className="h-3.5 w-3.5 text-indigo-400 mt-1 shrink-0" />
                         )}
-                      </button>
+                      </Button>
                     </div>
                   );
                 })
@@ -546,7 +545,7 @@ export default function MessengerView({ workspaceId, users = [] }) {
           <main className="flex-1 flex flex-col overflow-hidden" aria-label={t('messenger.panel.thread', 'Message thread')}>
             {showNewConv ? (
               /* New conversation form */
-              <div className="p-8 max-w-md mx-auto mt-8">
+              <div className="p-8 max-w-reading mx-auto mt-8">
                 <h2 className="text-lg font-semibold text-neutral-900 mb-6">
                   {t('messenger.newConversation.title', 'New Conversation')}
                 </h2>
@@ -580,7 +579,6 @@ export default function MessengerView({ workspaceId, users = [] }) {
                       onChange={(e) => dispatch({ type: 'NEW_SUBJECT', val: e.target.value })}
                       placeholder={t('messenger.newConversation.placeholder', 'e.g. Q3 Planning')}
                       onKeyDown={(e) => { if (e.key === 'Enter') handleCreateConv(); }}
-                      autoFocus
                     />
                   </div>
                   <div className="flex gap-3 pt-2">
@@ -695,8 +693,7 @@ export default function MessengerView({ workspaceId, users = [] }) {
                       {pinnedMessages.map((p, i) => {
                         const m = messages.find((msg) => msg.id === p.messageId);
                         return m ? (
-                          // eslint-disable-next-line react/no-array-index-key
-                          <span key={i} className="truncate">
+                          <span key={p.id || p.messageId} className="truncate">
                             {m.body?.substring(0, 60)}{m.body?.length > 60 ? '…' : ''}
                             {i < pinnedMessages.length - 1 ? ' · ' : ''}
                           </span>
@@ -749,7 +746,7 @@ export default function MessengerView({ workspaceId, users = [] }) {
                         ref={replyRef}
                         id="message-composer"
                         rows={1}
-                        className="input resize-none py-2.5 pr-10 min-h-[42px] max-h-40"
+                        className="input resize-none py-2.5 pr-10 min-h-10 max-h-40"
                         placeholder={t('messenger.composer.placeholder', 'Type a message… Use /task or /decision to create a work item')}
                         value={reply}
                         onChange={(e) => {
@@ -798,13 +795,13 @@ export default function MessengerView({ workspaceId, users = [] }) {
                 <h3 className="font-semibold text-sm text-neutral-700">
                   {t('messenger.panel.participants', 'Participants')}
                 </h3>
-                <button
+                <Button unstyled type="button"
                   onClick={() => dispatch({ type: 'TOGGLE_PARTS' })}
                   aria-label={t('common.close', 'Close')}
                   className="text-neutral-400 hover:text-neutral-600"
                 >
                   <X className="h-4 w-4" />
-                </button>
+                </Button>
               </div>
 
               <div className="flex-1 overflow-y-auto p-3 space-y-2" role="list" aria-label={t('messenger.panel.memberList', 'Member list')}>

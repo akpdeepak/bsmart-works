@@ -6,7 +6,7 @@
     { "id": "project-state", "kind": "policy", "command": "node scripts/generate-project-state.mjs --check" },
     { "id": "ai-rules", "kind": "policy", "command": "node scripts/generate-ai-rules.mjs --check" },
     { "id": "dod-sync", "kind": "policy", "command": "bash scripts/check-dod-sync.sh" },
-    { "id": "repo-quality", "kind": "policy", "command": "node scripts/quality-gates.mjs && node scripts/uiux-premium-bar.mjs && node scripts/uiux-end-to-end-scope.mjs && node scripts/epics-01-05-completion.mjs && node scripts/epic-06-completion.mjs && node scripts/epic-07-completion.mjs && node scripts/epic-08-completion.mjs" },
+    { "id": "repo-quality", "kind": "policy", "command": "node scripts/quality-gates.mjs && node scripts/uiux-premium-bar.mjs && node scripts/uiux-end-to-end-scope.mjs && node scripts/epics-01-05-completion.mjs && node scripts/epic-06-completion.mjs && node scripts/epic-07-completion.mjs && node scripts/epic-08-completion.mjs && node scripts/epics-09-15-completion.mjs" },
     { "id": "guardrails", "kind": "policy", "command": "bash scripts/guardrails.sh" },
     { "id": "docs-links", "kind": "docs", "command": "node scripts/check-doc-integrity.mjs" },
     { "id": "frontend-lint", "kind": "frontend", "command": "cd works-frontend && npm run lint" },

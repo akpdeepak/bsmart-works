@@ -153,7 +153,7 @@ export function WorkItemDetailPanel({
                 </select>
                 <span>priority, owned by</span>
                 <select 
-                  className="bg-transparent border-none p-0 cursor-pointer text-brand-navy underline decoration-brand-navy/30 underline-offset-4 focus:ring-0 appearance-none font-semibold max-w-[150px] truncate"
+                  className="bg-transparent border-none p-0 cursor-pointer text-brand-navy underline decoration-brand-navy/30 underline-offset-4 focus:ring-0 appearance-none font-semibold max-w-40 truncate"
                   value={selectedItem.assigneeId || ''}
                   onChange={(e) => handleUpdateItem(selectedItem.id, { assigneeId: e.target.value })}
                 >

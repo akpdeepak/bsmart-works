@@ -277,12 +277,13 @@ export default function BoardView({
               </span>
             )}
             {totalWorkItemCount !== null && totalWorkItemCount > workItems.length && (
-              <button
+              <Button unstyled
+                type="button"
                 onClick={() => fetchAll(Math.ceil(workItems.length / 200), 200)}
                 className="ml-2 text-xs font-medium text-brand-navy hover:underline focus:outline-none"
               >
                 Load More
-              </button>
+              </Button>
             )}
 
           </p>

@@ -50,7 +50,7 @@ const baseProps = {
   createCrossProjectDep: noop,
   reportError: noop,
   showToast: noop,
-  api: { send: vi.fn(), raw: () => Promise.resolve({ json: () => ({}) }), send: () => Promise.resolve() },
+  api: { raw: () => Promise.resolve({ json: () => ({}) }), send: vi.fn(() => Promise.resolve()) },
 };
 
 describe('PmView', () => {

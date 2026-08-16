@@ -251,6 +251,7 @@ test('unified verification preserves product-quality and completed-EPIC gates', 
     'epic-06-completion.mjs',
     'epic-07-completion.mjs',
     'epic-08-completion.mjs',
+    'epics-09-15-completion.mjs',
   ]) {
     assert.match(manifest, new RegExp(script.replaceAll('.', '\\.')));
   }

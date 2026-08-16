@@ -570,10 +570,8 @@ export default function AppShell() {
     setWsOpen(false);
     
     // Soft reload of workspace-bound global state
-    queryClient.invalidateQueries();
     setRoleLoaded(false);
     fetchUserRole();
-    fetchProjects(id);
     fetchAll(0, 200);
     fetchReleases();
     fetchTeams();
@@ -771,7 +769,7 @@ export default function AppShell() {
   const handleLogout = async () => {
     try {
       await api.send('/auth/logout', { method: 'POST' });
-    } catch (e) {
+    } catch {
       // Best effort; proceed to local clearing even if network fails
     } finally {
       setCurrentUser(null); setToken(null);

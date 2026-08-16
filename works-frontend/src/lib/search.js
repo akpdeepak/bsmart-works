@@ -8,10 +8,6 @@ import { api } from '@/lib/apiClient';
 // `types` controls which resource kinds to query — pass ['work_items'] or ['articles'] to restrict.
 export const searchClient = {
   async search(workspaceId, query, { types = ['work_items', 'articles'], page = 0, size = 20 } = {}) {
-    // BQL title-contains — simplest text filter the backend already supports.
-    const bqlQuery = `title contains "${query.replace(/"/g, '\\"')}"`;
-    const wiParams = new URLSearchParams({ workspaceId, q: bqlQuery, page, size });
-
     const [wiResult, articleResult] = await Promise.allSettled([
       types.includes('work_items')
         ? api.send(`/work-items/search?workspaceId=${encodeURIComponent(workspaceId)}&q=${encodeURIComponent(query)}&page=${page}&size=${size}`)

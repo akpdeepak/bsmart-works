@@ -55,7 +55,7 @@ const baseProps = {
   createWorkItemType: noop,
   reportError: noop,
   showToast: noop,
-  api: { send: vi.fn(), raw: () => Promise.resolve({ json: () => ({}) }), send: () => Promise.resolve() },
+  api: { raw: () => Promise.resolve({ json: () => ({}) }), send: vi.fn(() => Promise.resolve()) },
 };
 
 describe('Settings3View', () => {

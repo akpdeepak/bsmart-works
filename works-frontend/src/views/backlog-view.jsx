@@ -330,6 +330,17 @@ export default function BacklogView({
                 <kbd className="font-mono">j/k</kbd> navigate · <kbd className="font-mono">Enter</kbd> open · <kbd className="font-mono">Esc</kbd> clear
               </p>
             )}
+            {totalBacklogCount > backlogItems.length && (
+              <div className="border-t border-neutral-100 dark:border-neutral-700 p-3 text-center">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => fetchBacklog(Math.floor(backlogItems.length / 200), 200)}
+                >
+                  Load more ({backlogItems.length} of {totalBacklogCount})
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>

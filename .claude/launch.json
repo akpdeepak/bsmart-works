@@ -5,8 +5,8 @@
       "name": "bsmart-works-frontend",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--prefix", "works-frontend"],
-      "port": 5174,
-      "autoPort": true
+      "port": 5173,
+      "autoPort": false
     }
   ]
 }

@@ -57,7 +57,7 @@ class SprintReportTest {
             mock(com.bcits.works.projects.ProjectService.class);
 
     private final SprintController controller = new SprintController(
-            sprintRepository, workItemRepository, eventService, sprintDao, authenticatedUser, rbac, statusConfig,
+            sprintRepository, eventService, sprintDao, authenticatedUser, rbac, statusConfig,
             projectService);
 
     private Sprint sprintA;

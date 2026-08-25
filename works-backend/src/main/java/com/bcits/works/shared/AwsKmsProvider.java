@@ -88,7 +88,7 @@ public class AwsKmsProvider implements KmsProvider {
                            AwsBasicCredentials.create(props.getAccessKey(), props.getSecretKey())));
             } else {
                 // Prod: the default AWS credential chain (instance role / env / profile).
-                builder.credentialsProvider(DefaultCredentialsProvider.create());
+                builder.credentialsProvider(DefaultCredentialsProvider.builder().build());
             }
             return builder.build();
         };

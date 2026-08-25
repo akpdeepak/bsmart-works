@@ -108,7 +108,7 @@ public class ConditionalAccessService {
             throw ApiException.badRequest("INVALID_WINDOW",
                     "Provide both start and end minute for a time window, or neither.");
         }
-        if (s != null && (s < 0 || s > 1439 || e < 0 || e > 1439)) {
+        if (s != null && e != null && (s < 0 || s > 1439 || e < 0 || e > 1439)) {
             throw ApiException.badRequest("INVALID_WINDOW",
                     "Time-window minutes must be between 0 and 1439.");
         }

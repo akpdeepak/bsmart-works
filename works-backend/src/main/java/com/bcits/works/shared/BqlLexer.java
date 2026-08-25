@@ -35,7 +35,6 @@ final class BqlLexer {
                 i++;
                 continue;
             }
-            int start = i;
             switch (c) {
                 case '(' -> out.add(single(TokenType.LPAREN, "("));
                 case ')' -> out.add(single(TokenType.RPAREN, ")"));

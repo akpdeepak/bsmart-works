@@ -37,7 +37,6 @@ class WorkflowRuleEngineTest {
     private WorkflowRepository workflowRepo;
     private WorkflowTransitionRepository transitionRepo;
     private WorkflowStatusRepository statusRepo;
-    private FieldDefRepository fieldDefRepo;
     private RbacService rbac;
     private JdbcTemplate jdbc;
     private WorkflowRuleEngine engine;
@@ -56,10 +55,10 @@ class WorkflowRuleEngineTest {
         workflowRepo  = mock(WorkflowRepository.class);
         transitionRepo = mock(WorkflowTransitionRepository.class);
         statusRepo    = mock(WorkflowStatusRepository.class);
-        fieldDefRepo  = mock(FieldDefRepository.class);
+
         rbac          = mock(RbacService.class);
         jdbc          = mock(JdbcTemplate.class);
-        engine = new WorkflowRuleEngine(workflowRepo, transitionRepo, statusRepo, fieldDefRepo, rbac, jdbc);
+        engine = new WorkflowRuleEngine(workflowRepo, transitionRepo, statusRepo, rbac, jdbc);
     }
 
     // ── No workflow configured → no-op ─────────────────────────────────────────

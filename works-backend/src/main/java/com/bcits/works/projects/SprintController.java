@@ -40,7 +40,6 @@ import java.util.Map;
 public class SprintController {
 
     private final SprintRepository sprintRepository;
-    private final WorkItemRepository workItemRepository;
     private final EventService eventService;
     private final SprintDao sprintDao;
     private final AuthenticatedUser authenticatedUser;
@@ -48,12 +47,11 @@ public class SprintController {
     private final StatusConfigService statusConfig;
     private final ProjectService projectService;
 
-    public SprintController(SprintRepository sprintRepository, WorkItemRepository workItemRepository,
+    public SprintController(SprintRepository sprintRepository,
                             EventService eventService, SprintDao sprintDao,
                             AuthenticatedUser authenticatedUser, RbacGate rbac,
                             StatusConfigService statusConfig, ProjectService projectService) {
         this.sprintRepository = sprintRepository;
-        this.workItemRepository = workItemRepository;
         this.eventService = eventService;
         this.sprintDao = sprintDao;
         this.authenticatedUser = authenticatedUser;

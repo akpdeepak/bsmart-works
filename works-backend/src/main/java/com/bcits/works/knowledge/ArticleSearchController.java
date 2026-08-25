@@ -22,18 +22,12 @@ import java.util.List;
 public class ArticleSearchController {
 
     private final JdbcTemplate jdbc;
-    private final KnowledgeSpaceRepository spaceRepository;
     private final AuthenticatedUser authenticatedUser;
-    private final RbacGate rbac;
 
     public ArticleSearchController(JdbcTemplate jdbc,
-                                    KnowledgeSpaceRepository spaceRepository,
-                                    AuthenticatedUser authenticatedUser,
-                                    RbacGate rbac) {
+                                    AuthenticatedUser authenticatedUser) {
         this.jdbc = jdbc;
-        this.spaceRepository = spaceRepository;
         this.authenticatedUser = authenticatedUser;
-        this.rbac = rbac;
     }
 
     @GetMapping
@@ -71,7 +65,7 @@ public class ArticleSearchController {
             ? new Object[]{ q, userId, q, spaceId, q, safeLimit }
             : new Object[]{ q, userId, q, q, safeLimit };
 
-        return jdbc.query(sql, params, (rs, i) -> {
+        return jdbc.query(sql, (rs, i) -> {
             ArticleSearchResult r = new ArticleSearchResult();
             r.setId(rs.getString("id"));
             r.setTitle(rs.getString("title"));
@@ -81,6 +75,6 @@ public class ArticleSearchController {
             r.setTemplateType(rs.getString("template_type"));
             r.setExcerpt(rs.getString("excerpt"));
             return r;
-        });
+        }, params);
     }
 }

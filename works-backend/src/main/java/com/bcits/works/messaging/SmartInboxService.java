@@ -310,7 +310,7 @@ public class SmartInboxService {
         String title = rs.getString("title");
         String message = rs.getString("repo") + " #" + rs.getInt("number");
         String url = rs.getString("url");
-        return new InboxItem("pull-request:" + id, "REVIEW", "Code review request", title,
+        return new InboxItem("pull-request:" + id, "REVIEW", "Code review request", message + ": " + title,
             "PULL_REQUEST", id, url, offset(rs, "updated_at"), "HIGH",
             new Action("review", "Review", url == null || url.isBlank() ? "OPEN" : "EXTERNAL", "GET", url),
             List.of());

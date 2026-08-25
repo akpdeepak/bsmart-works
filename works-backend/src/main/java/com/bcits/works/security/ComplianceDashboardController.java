@@ -28,7 +28,6 @@ import java.util.Map;
 @RequestMapping("/api/v1/compliance")
 public class ComplianceDashboardController {
 
-    private static final List<String> ACTIVE = List.of("OPEN", "ACKNOWLEDGED");
 
     private final JdbcTemplate jdbc;
     private final AuthenticatedUser authenticatedUser;

@@ -81,9 +81,7 @@ public class PushDeliveryService {
      */
     DeliveryResult deliver(PushSubscription sub, String title, String body) {
         String endpoint = sub.getEndpoint();
-        boolean failed = endpoint == null
-            || endpoint.toLowerCase(Locale.ROOT).contains("fail");
-        if (failed) {
+        if (endpoint == null || endpoint.toLowerCase(Locale.ROOT).contains("fail")) {
             log.debug("[PUSH] Delivery failed for sub={} (endpoint rejected)", sub.getId());
             return DeliveryResult.FAILED;
         }

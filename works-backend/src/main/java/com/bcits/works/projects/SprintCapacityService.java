@@ -174,9 +174,9 @@ public class SprintCapacityService {
         for (ProjectTeamMember m : members) {
             SprintMemberCapacity row = rowByUser.get(m.getUserId());
             boolean hasRow = row != null;
-            Integer override = hasRow ? row.getWorkingDays() : null;
-            int timeOff = hasRow && row.getTimeOffDays() != null ? row.getTimeOffDays() : 0;
-            int focus = clampFocus(hasRow ? row.getFocusFactorPct() : null);
+            Integer override = row != null ? row.getWorkingDays() : null;
+            int timeOff = row != null && row.getTimeOffDays() != null ? row.getTimeOffDays() : 0;
+            int focus = clampFocus(row != null ? row.getFocusFactorPct() : null);
 
             int effectiveDays;
             int cap;

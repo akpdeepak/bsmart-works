@@ -45,8 +45,6 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
-    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
-
     // Rate-limit budgets (per email+IP / per IP) — fail-closed (RB-10 §8).
     private static final int  LOGIN_MAX        = 10;
     private static final long LOGIN_WINDOW_S   = 60;

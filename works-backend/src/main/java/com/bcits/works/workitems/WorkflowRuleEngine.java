@@ -29,7 +29,6 @@ public class WorkflowRuleEngine {
     private final WorkflowRepository workflowRepo;
     private final WorkflowTransitionRepository transitionRepo;
     private final WorkflowStatusRepository statusRepo;
-    private final FieldDefRepository fieldDefRepo;
     private final RbacGate rbac;
     private final JdbcTemplate jdbc;
     private final ObjectMapper mapper = new ObjectMapper();
@@ -37,13 +36,11 @@ public class WorkflowRuleEngine {
     public WorkflowRuleEngine(WorkflowRepository workflowRepo,
                                WorkflowTransitionRepository transitionRepo,
                                WorkflowStatusRepository statusRepo,
-                               FieldDefRepository fieldDefRepo,
                                RbacGate rbac,
                                JdbcTemplate jdbc) {
         this.workflowRepo = workflowRepo;
         this.transitionRepo = transitionRepo;
         this.statusRepo = statusRepo;
-        this.fieldDefRepo = fieldDefRepo;
         this.rbac = rbac;
         this.jdbc = jdbc;
     }

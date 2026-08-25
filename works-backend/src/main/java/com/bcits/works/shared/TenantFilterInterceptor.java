@@ -2,7 +2,6 @@ package com.bcits.works.shared;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -56,7 +55,7 @@ public class TenantFilterInterceptor implements HandlerInterceptor {
 
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response,
-                                Object handler, @Nullable Exception ex) {
+                                Object handler, Exception ex) {
         // Belt-and-braces: make sure the filter is not left enabled on the session. The thread-local
         // itself is cleared by TenantContextCleanupFilter; this guards the Hibernate session.
         activator.disableForCurrentSession();

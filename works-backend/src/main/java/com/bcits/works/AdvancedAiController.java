@@ -80,7 +80,7 @@ public class AdvancedAiController {
     @GetMapping("/assistants")
     public List<AiAssistant> listAssistants(@RequestParam String workspaceId,
                                             @RequestParam(defaultValue = "false") boolean enabledOnly) {
-        String userId = requireMember(workspaceId);
+        requireMember(workspaceId);
         return enabledOnly ? assistants.listEnabled(workspaceId) : assistants.list(workspaceId);
     }
 

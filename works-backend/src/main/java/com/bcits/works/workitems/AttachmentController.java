@@ -117,7 +117,7 @@ public class AttachmentController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A valid http(s) URL is required");
         }
         if (url.length() > 2048) {
-            throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "URL exceeds 2048 characters");
+            throw new ResponseStatusException(HttpStatus.valueOf(413), "URL exceeds 2048 characters");
         }
         String title = body.get("title") != null && !body.get("title").isBlank() ? body.get("title").trim() : url;
         if (title.length() > 255) title = title.substring(0, 255);
@@ -141,7 +141,7 @@ public class AttachmentController {
 
         // 1. Configurable size limit
         if (file.getSize() > maxSizeBytes) {
-            throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE,
+            throw new ResponseStatusException(HttpStatus.valueOf(413),
                 "File exceeds maximum allowed size of " + (maxSizeBytes / 1024 / 1024) + " MB");
         }
 
@@ -160,7 +160,7 @@ public class AttachmentController {
             String scanResult = scanWithClamAV(bytes);
             if (!"OK".equals(scanResult)) {
                 log.warn("[VIRUS SCAN] Blocked upload for work item {}: {}", workItemId, scanResult);
-                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                throw new ResponseStatusException(HttpStatus.valueOf(422),
                     "File rejected by virus scanner: " + scanResult);
             }
         } else {

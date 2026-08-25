@@ -46,6 +46,7 @@ import org.springframework.stereotype.Component;
  * the webauthn4j-test authenticator emulator.
  */
 @Component
+@SuppressWarnings("deprecation")
 public class WebAuthnFido2Verifier {
 
     private final WebAuthnSettings settings;

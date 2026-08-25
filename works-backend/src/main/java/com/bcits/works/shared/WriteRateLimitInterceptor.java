@@ -6,7 +6,6 @@ import com.bcits.works.service.CustomerAuthController;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -49,7 +48,7 @@ public class WriteRateLimitInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
-                             @Nullable Object handler) throws IOException {
+                             Object handler) throws IOException {
         if (writesPerMinute <= 0) {
             return true; // disabled
         }

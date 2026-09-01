@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { parseEntityRoute, pathToView, viewToPath } from '@/lib/routes';
 
-export function useShellNavigation({ selectedItem, setSelectedItem }) {
+export function useShellNavigation({ selectedItem, setSelectedItem, onOpenItem }) {
   const [view, setView] = useState(() => pathToView(window.location.pathname) || 'dashboard');
   const didInitRoute = useRef(false);
   const navigateRef = useRef(null);
@@ -18,7 +18,7 @@ export function useShellNavigation({ selectedItem, setSelectedItem }) {
     function onPop() {
       const entity = parseEntityRoute(window.location.pathname);
       if (entity?.kind === 'work-item') {
-        setSelectedItem((current) => current?.id === entity.id ? current : { id: entity.id });
+        onOpenItem(entity.id);
         return;
       }
       const nextView = pathToView(window.location.pathname) || 'dashboard';
@@ -29,7 +29,7 @@ export function useShellNavigation({ selectedItem, setSelectedItem }) {
 
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
-  }, [selectedItem, setSelectedItem]);
+  }, [onOpenItem, selectedItem, setSelectedItem]);
 
   return { view, setView, didInitRoute, navigateRef };
 }

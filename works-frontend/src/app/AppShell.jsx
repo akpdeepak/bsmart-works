@@ -45,6 +45,7 @@ import { Field } from '@/components/works/field';
 import { readStoredSession } from '@/app/session/session-storage';
 import { useGlobalShortcuts } from '@/app/shortcuts/useGlobalShortcuts';
 import { useShellNavigation } from '@/app/navigation/useShellNavigation';
+import { useWorkItemSelection } from '@/app/work-items/useWorkItemSelection';
 import { useShellOverlays } from '@/app/overlays/useShellOverlays';
 import { useRealtimePresence } from '@/app/realtime/useRealtimePresence';
 import { useWorkspaceContext } from '@/app/workspaces/useWorkspaceContext';
@@ -82,8 +83,12 @@ export default function AppShell() {
   const [mfaSetup, setMfaSetup]         = useState(null); // { otpAuthUri, secret } — enroll flow
   const [mfaSetupCode, setMfaSetupCode] = useState('');
   const [mfaSetupMsg, setMfaSetupMsg]   = useState('');
-  const [selectedItem, setSelectedItem] = useState(null);
-  const { view, setView, didInitRoute, navigateRef } = useShellNavigation({ selectedItem, setSelectedItem });
+  const { selectedItem, setSelectedItem, openWorkItemById } = useWorkItemSelection();
+  const { view, setView, didInitRoute, navigateRef } = useShellNavigation({
+    selectedItem,
+    setSelectedItem,
+    onOpenItem: openWorkItemById,
+  });
   const [toast, setToast]               = useState(null); // { message, type }
   const { confirm, prompt } = useDialog(); // in-app dialogs (lib/dialog.jsx), not window.* natives
   const [workItems, setWorkItems]       = useState([]);
@@ -345,12 +350,10 @@ export default function AppShell() {
     if (v && v !== 'dashboard' && navigateRef.current) { navigateRef.current(v); return; }
     const entity = parseEntityRoute(pathname);
     if (entity?.kind === 'work-item') {
-      // workItems may not be loaded yet; set a stub so the detail panel fetches the full item.
-      // queueMicrotask defers the setState out of the synchronous effect body (react-hooks/set-state-in-effect).
       const entityId = entity.id;
-      queueMicrotask(() => setSelectedItem(prev => prev?.id === entityId ? prev : { id: entityId }));
+      queueMicrotask(() => openWorkItemById(entityId));
     }
-  }, [currentUser, workspaceReady, activeWorkspaceId]);
+  }, [currentUser, workspaceReady, activeWorkspaceId, didInitRoute, navigateRef, openWorkItemById]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
@@ -1771,7 +1774,7 @@ export default function AppShell() {
       );
       const items = (res.items || []).map(it => ({
         id: `item-${it.id}`, label: `${it.id} · ${it.title}`, group: 'Items', Icon: ListTodo,
-        run: () => { setSelectedItem({ id: it.id, title: it.title, type: it.type, status: it.status }); },
+        run: () => { openWorkItemById(it.id); },
       }));
       const people = (res.people || []).map(p => ({
         id: `person-${p.id}`, label: p.full_name || p.email, group: 'People', Icon: User,

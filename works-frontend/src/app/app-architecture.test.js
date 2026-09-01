@@ -52,7 +52,7 @@ describe('frontend app architecture', () => {
     expect(source).toContain("from '@/hooks/useProductOwnerState'");
     // useState ratchet — the feature-state row is measured by how much state lives here,
     // not only by line count. Lower this in the same PR that extracts global context out.
-    expect(source.match(/useState/g) || []).toHaveLength(130);
+    expect(source.match(/useState/g) || []).toHaveLength(129);
     expect(source).not.toMatch(/^\/\* eslint-disable/m);
     expect(source).not.toContain('connectRealtime(');
     expect(source).not.toContain("'WS-001'");

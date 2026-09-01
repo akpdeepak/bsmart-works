@@ -19,13 +19,14 @@ describe('useShellNavigation', () => {
 
   it('opens an entity route on browser navigation', () => {
     const setSelectedItem = vi.fn();
-    renderHook(() => useShellNavigation({ selectedItem: null, setSelectedItem }));
+    const onOpenItem = vi.fn();
+    renderHook(() => useShellNavigation({ selectedItem: null, setSelectedItem, onOpenItem }));
 
     window.history.replaceState({}, '', '/items/WRK-42');
     act(() => window.dispatchEvent(new PopStateEvent('popstate')));
 
-    expect(setSelectedItem).toHaveBeenCalledWith(expect.any(Function));
-    expect(setSelectedItem.mock.calls.at(-1)[0](null)).toEqual({ id: 'WRK-42' });
+    expect(onOpenItem).toHaveBeenCalledWith('WRK-42');
+    expect(setSelectedItem).not.toHaveBeenCalled();
   });
 
   it('preserves an initial entity deep link until the shell resolves it', () => {
